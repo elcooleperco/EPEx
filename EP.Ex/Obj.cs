@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 
@@ -10,25 +11,37 @@ namespace EP.Ex
     /// Class implement object extension
     /// </summary>
     /// <typeparam name="T">Object</typeparam>
-    public class Obj<T> where T : class
+    public class Obj<T>// where T : class
     {
-        static Func<T> c_tor;
+        internal static Func<T> c_tor;
         /// <summary>
         /// Constructor initialise object create func, use constructor without params
         /// </summary>
         static Obj()
         {
             var t = typeof(T);
-            var c = t.GetConstructor(new Type[] { });
+
             DynamicMethod creator = new DynamicMethod(string.Empty,
                         t,
                         new Type[] { },
                         t, true);
             ILGenerator il = creator.GetILGenerator();
-
-            il.Emit(OpCodes.Newobj, c);
+            if (t.IsValueType)
+            {
+                var vt = il.DeclareLocal(t);
+                il.Emit(OpCodes.Ldloca_S, vt);
+                il.Emit(OpCodes.Initobj, t);
+                il.Emit(OpCodes.Ldloc_S, vt);
+                //il.Emit(OpCodes.Box);
+            }
+            else
+            {
+                var c = t.GetConstructor(new Type[] { });
+                il.Emit(OpCodes.Newobj, c);
+            }
             il.Emit(OpCodes.Ret);
             c_tor = (Func<T>)creator.CreateDelegate(typeof(Func<T>));
+
         }
         /// <summary>
         /// Create new object
@@ -44,26 +57,34 @@ namespace EP.Ex
     /// </summary>
     public class Obj
     {
-        static ConcurrentDictionary<Type, Func<object>> map = new ConcurrentDictionary<Type, Func<object>>();
+        static ConcurrentDictionary<Type, Func<object>> m_map = new ConcurrentDictionary<Type, Func<object>>();
         /// <summary>
         /// Constructor initialise object create func for type, use constructor without params
         /// </summary>
         public static object New(Type t)
         {
             Func<object> f;
-            if (!map.TryGetValue(t, out f))
+            if (!m_map.TryGetValue(t, out f))
             {
-                var c = t.GetConstructor(new Type[] { });
+                var c = typeof(Obj<>).MakeGenericType(t).GetField("c_tor", BindingFlags.Static | BindingFlags.NonPublic);
+                var m = c.FieldType.GetMethod("Invoke");
                 DynamicMethod creator = new DynamicMethod(string.Empty,
-                            t,
+                            typeof(object),
                             new Type[] { },
-                            t);
+                            t, true);
                 ILGenerator il = creator.GetILGenerator();
-
-                il.Emit(OpCodes.Newobj, c);
-                il.Emit(OpCodes.Castclass, typeof(object));
+                il.Emit(OpCodes.Ldsfld, c);
+                il.Emit(OpCodes.Callvirt, m);
+                if (t.IsValueType)
+                {
+                    il.Emit(OpCodes.Box, t);
+                }
+                else
+                {
+                    il.Emit(OpCodes.Castclass, typeof(object));
+                }
                 il.Emit(OpCodes.Ret);
-                map[t] = (f = (Func<object>)creator.CreateDelegate(typeof(Func<object>)));
+                m_map[t] = (f = (Func<object>)creator.CreateDelegate(typeof(Func<object>)));
             }
             return f();
         }
@@ -74,7 +95,7 @@ namespace EP.Ex
         /// <returns>New object</returns>
         public static T New<T>()
         {
-            return (T)New(typeof(T));
+            return Obj<T>.c_tor();
         }
     }
 }
