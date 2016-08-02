@@ -26,23 +26,12 @@ namespace EP.Ex
                         new Type[] { },
                         t, true);
             ILGenerator il = creator.GetILGenerator();
-            if (t.IsValueType)
-            {
-                var vt = il.DeclareLocal(t);
-                il.Emit(OpCodes.Ldloca_S, vt);
-                il.Emit(OpCodes.Initobj, t);
-                il.Emit(OpCodes.Ldloc_S, vt);
-                //il.Emit(OpCodes.Box);
-            }
-            else
-            {
-                var c = t.GetConstructor(new Type[] { });
-                il.Emit(OpCodes.Newobj, c);
-            }
+            Obj.m_create_new_generate(il, t);
             il.Emit(OpCodes.Ret);
             c_tor = (Func<T>)creator.CreateDelegate(typeof(Func<T>));
 
         }
+
         /// <summary>
         /// Create new object
         /// </summary>
@@ -58,6 +47,21 @@ namespace EP.Ex
     public class Obj
     {
         static ConcurrentDictionary<Type, Func<object>> m_map = new ConcurrentDictionary<Type, Func<object>>();
+        internal static void m_create_new_generate(ILGenerator il, Type t)
+        {
+            if (t.IsValueType)
+            {
+                var vt = il.DeclareLocal(t);
+                il.Emit(OpCodes.Ldloca_S, vt);
+                il.Emit(OpCodes.Initobj, t);
+                il.Emit(OpCodes.Ldloc_S, vt);
+            }
+            else
+            {
+                var c = t.GetConstructor(new Type[] { });
+                il.Emit(OpCodes.Newobj, c);
+            }
+        }
         /// <summary>
         /// Constructor initialise object create func for type, use constructor without params
         /// </summary>
@@ -66,15 +70,12 @@ namespace EP.Ex
             Func<object> f;
             if (!m_map.TryGetValue(t, out f))
             {
-                var c = typeof(Obj<>).MakeGenericType(t).GetField("c_tor", BindingFlags.Static | BindingFlags.NonPublic);
-                var m = c.FieldType.GetMethod("Invoke");
                 DynamicMethod creator = new DynamicMethod(string.Empty,
                             typeof(object),
                             new Type[] { },
                             t, true);
                 ILGenerator il = creator.GetILGenerator();
-                il.Emit(OpCodes.Ldsfld, c);
-                il.Emit(OpCodes.Callvirt, m);
+                m_create_new_generate(il, t);
                 if (t.IsValueType)
                 {
                     il.Emit(OpCodes.Box, t);

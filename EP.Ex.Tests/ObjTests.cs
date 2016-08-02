@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
 
 namespace EP.Ex.Tests
 {
@@ -47,6 +48,53 @@ namespace EP.Ex.Tests
             Assert.IsInstanceOfType(s1, typeof(st1));
             Assert.IsInstanceOfType(s2, typeof(st1));
             Assert.AreEqual(s2.s, str);
+        }
+        [TestMethod()]
+        public void NewPerformanceTest()
+        {
+            const int count = 100000000;
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            for (int i = 0; i < count; ++i)
+            {
+                var obj = new TestClass();
+            }
+            stopwatch.Stop();
+            Console.WriteLine("new object: {0} ms", stopwatch.ElapsedMilliseconds);
+            stopwatch.Restart();
+            for (int i = 0; i < count; ++i)
+            {
+                var obj = Obj<TestClass>.New();
+            }
+            stopwatch.Stop();
+            Console.WriteLine("Obj<TestClass>.New : {0} ms", stopwatch.ElapsedMilliseconds);
+            stopwatch.Restart();
+            for (int i = 0; i < count; ++i)
+            {
+                var obj = Obj.New<TestClass>();
+            }
+            stopwatch.Stop();
+            Console.WriteLine("Obj.New<TestClass> : {0} ms", stopwatch.ElapsedMilliseconds);
+            stopwatch.Restart();
+            for (int i = 0; i < count; ++i)
+            {
+                var obj = Obj.New(typeof(TestClass));
+            }
+            stopwatch.Stop();
+            Console.WriteLine("Obj.New typeof(TestClass) : {0} ms", stopwatch.ElapsedMilliseconds);
+            stopwatch.Restart();
+            for (int i = 0; i < count; ++i)
+            {
+                var obj = Activator.CreateInstance<TestClass>();
+            }
+            stopwatch.Stop();
+            Console.WriteLine("Activator<TestClass> : {0} ms", stopwatch.ElapsedMilliseconds);
+            stopwatch.Restart();
+            for (int i = 0; i < count; ++i)
+            {
+                var obj = Activator.CreateInstance(typeof(TestClass));
+            }
+            stopwatch.Stop();
+            Console.WriteLine("Activator.CreateInstance(typeof(TestClass)) : {0} ms", stopwatch.ElapsedMilliseconds);
         }
     }
 }
