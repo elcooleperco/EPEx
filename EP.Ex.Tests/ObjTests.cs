@@ -96,5 +96,30 @@ namespace EP.Ex.Tests
             stopwatch.Stop();
             Console.WriteLine("Activator.CreateInstance(typeof(TestClass)) : {0} ms", stopwatch.ElapsedMilliseconds);
         }
+
+        [TestMethod()]
+        public void ShallowCopyTest()
+        {
+            const string str = "231231";
+            TestClass t = Obj<TestClass>.New();
+            t.Str = str + str;
+            st1 s = Obj<st1>.New();
+            s.s = str;
+            Console.WriteLine(t.Str);
+            Console.WriteLine(s.s);
+            var t1 = Obj<TestClass>.ShallowCopy(t);
+            var s1 = Obj<st1>.ShallowCopy(s);
+            var s2 = s1;
+            Console.WriteLine(t1.Str);
+            Console.WriteLine(s1.s);
+            Console.WriteLine(s2.s);
+            Assert.IsNotNull(t);
+            Assert.IsNotNull(t1);
+            Assert.IsInstanceOfType(t1, typeof(TestClass));
+            Assert.IsInstanceOfType(s1, typeof(st1));
+            Assert.AreEqual(t1.Str, t.Str);
+            Assert.AreEqual(s1.s, s.s);
+            Assert.IsFalse(Assert.ReferenceEquals(t, t1));
+        }
     }
 }
