@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.Serialization;
-using System.Text;
 
 namespace EP.Ex
 {
@@ -14,8 +13,17 @@ namespace EP.Ex
     /// <typeparam name="T">Object</typeparam>
     public class Obj<T>// where T : class
     {
+        #region Internal Fields
+
         internal static Func<T> c_tor;
         internal static Func<T, T> m_shallowcopy;
+        internal static Func<T, Dictionary<object, object>, T> m_deepcopy;
+        internal const BindingFlags FInternalStatic = Obj.FInternalStatic;
+
+        #endregion Internal Fields
+
+        #region Public Constructors
+
         /// <summary>
         /// Constructor initialise object create func, use constructor without params
         /// </summary>
@@ -23,8 +31,32 @@ namespace EP.Ex
         {
             c_tor = m_c_tor_func();
             m_shallowcopy = m_shallowcopy_func();
+            m_deepcopy = m_deepcopy_func();
         }
-        static Func<T> m_c_tor_func()
+
+        #endregion Public Constructors
+
+        #region Public Methods
+
+        /// <summary>
+        /// Create new object
+        /// </summary>
+        /// <returns>new object type T</returns>
+        public static T New()
+        {
+            return c_tor();
+        }
+
+        public static T ShallowCopy(T obj)
+        {
+            return m_shallowcopy(obj);
+        }
+
+        #endregion Public Methods
+
+        #region Private Methods
+
+        private static Func<T> m_c_tor_func()
         {
             var t = typeof(T);
 
@@ -37,11 +69,13 @@ namespace EP.Ex
             il.Emit(OpCodes.Ret);
             return (Func<T>)creator.CreateDelegate(typeof(Func<T>));
         }
-        static Func<T, T> m_shallowcopy_func()
+
+        private static Func<T, T> m_shallowcopy_func()
         {
             var t = typeof(T);
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t }, t, true);
             ILGenerator il = creator.GetILGenerator();
+
             //value type simple return from arg
             if (t.IsValueType)
             {
@@ -68,66 +102,145 @@ namespace EP.Ex
             il.Emit(OpCodes.Ret);
             return (Func<T, T>)creator.CreateDelegate(typeof(Func<T, T>));
         }
-        /// <summary>
-        /// Create new object
-        /// </summary>
-        /// <returns>new object type T</returns>
-        public static T New()
+
+        private static T[] m_deepcopy_array(T[] src, Dictionary<object, object> dic)
         {
-            return c_tor();
+            var t = typeof(T);
+            object o;
+            T[] dst;
+            if (dic.TryGetValue(src, out o))
+            {
+                return (T[])o;
+            }
+            dst = new T[src.Length];
+            if (t.IsSimple())
+            {
+                Array.Copy(src, dst, src.Length);
+            }
+            else
+            {
+                dic[src] = dst;
+                for (int i = 0; i < src.Length; ++i)
+                {
+                    dst[i] = (T)Obj.m_deepcopy(src[i], dic);
+                }
+            }
+            return dst;
         }
-        public static T ShallowCopy(T obj)
+
+        private static void m_addtodict(T oldobj, T newobj, Dictionary<object, object> dic)
         {
-            return m_shallowcopy(obj);
+            dic[oldobj] = newobj;
+
+            //return newobj;
         }
+
+        private static Func<T, Dictionary<object, object>, T> m_deepcopy_func()
+        {
+            var t = typeof(T);
+            var dic_t = typeof(Dictionary<object, object>);
+            DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t, dic_t }, t, true);
+            ILGenerator il = creator.GetILGenerator();
+            var addmethod = typeof(Obj<T>).GetMethod("m_addtodict", FInternalStatic);
+
+            //value type simple return from arg
+            if (t.IsSimple())
+            {
+                il.Emit(OpCodes.Ldarg_S, 0);
+            }
+            else
+            {
+                Obj.m_create_uninit_generate(il, t);
+                LocalBuilder va = il.DeclareLocal(t);
+                il.Emit(OpCodes.Stloc_S, va);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldloc_S, va);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Call, addmethod);
+                var flds = Obj.m_get_flds(t);
+                if (flds != null && flds.Length > 0)
+                {
+                    for (int i = 0; i < flds.Length; ++i)
+                    {
+                        var fi = flds[i];
+                        var ft = fi.FieldType;
+                        bool simple = ft.IsSimple();
+                        bool box = false;
+                        if (t.IsValueType)
+                        {
+                            il.Emit(OpCodes.Ldloca_S, va);
+                        }
+                        else
+                        {
+                            il.Emit(OpCodes.Ldloc_S, va);
+                        }
+                        il.Emit(OpCodes.Ldarg_S, 0);
+                        il.Emit(OpCodes.Ldfld, fi);
+                        if (ft.IsArray)
+                        {
+                            var arrt = ft.GetElementType();
+                            var ct = typeof(Obj<>).MakeGenericType(arrt).GetMethod("m_deepcopy_array", FInternalStatic);
+                            il.Emit(OpCodes.Ldarg_S, 1);
+                            il.Emit(OpCodes.Call, ct);
+                        }
+                        else if (!simple)
+                        {
+                            box = ft.IsValueType;
+                            if (box)
+                            {
+                                il.Emit(OpCodes.Box, ft);
+                            }
+                            else
+                            {
+                                il.Emit(OpCodes.Castclass, typeof(object));
+                            }
+                            var dc = typeof(Obj).GetMethod("m_deepcopy", FInternalStatic);
+                            il.Emit(OpCodes.Ldarg_S, 1);
+                            il.Emit(OpCodes.Call, dc);
+                            if (box)
+                            {
+                                il.Emit(OpCodes.Unbox, ft);
+                            }
+                            else
+                            {
+                                il.Emit(OpCodes.Castclass, ft);
+                            }
+                        }
+                        il.Emit(OpCodes.Stfld, fi);
+                    }
+                }
+                il.Emit(OpCodes.Ldloc_S, va);
+            }
+            il.Emit(OpCodes.Ret);
+            return (Func<T, Dictionary<object, object>, T>)creator.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>));
+        }
+
+        #endregion Private Methods
     }
+
     /// <summary>
     /// Create object by type
     /// </summary>
     public class Obj
     {
-        static ConcurrentDictionary<Type, Func<object>> m_map = new ConcurrentDictionary<Type, Func<object>>();
-        static ConcurrentDictionary<Type, Func<object, object>> m_swallow_clone_map = new ConcurrentDictionary<Type, Func<object, object>>();
-        internal static MethodInfo m_new_uninit_obj = typeof(FormatterServices).GetMethod("GetUninitializedObject");
+        #region Internal Fields
+
         internal static MethodInfo m_get_type_from_handle = typeof(Type).GetMethod("GetTypeFromHandle");
-        static void m_initsruct_generate(ILGenerator il, Type t)
-        {
-            var vt = il.DeclareLocal(t);
-            il.Emit(OpCodes.Ldloca_S, vt);
-            il.Emit(OpCodes.Initobj, t);
-            il.Emit(OpCodes.Ldloc_S, vt);
-        }
-        internal static void m_create_new_generate(ILGenerator il, Type t)
-        {
-            if (t.IsValueType)
-            {
-                m_initsruct_generate(il, t);
-            }
-            else
-            {
-                var c = t.GetConstructor(new Type[] { });
-                il.Emit(OpCodes.Newobj, c);
-            }
-        }
-        internal static FieldInfo[] m_get_flds(Type t)
-        {
-            return t.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public); ;
-        }
-        internal static void m_create_uninit_generate(ILGenerator il, Type t)
-        {
-            if (t.IsValueType)
-            {
-                m_initsruct_generate(il, t);
-            }
-            else
-            {
-                /// call FormatterServices.GetUninitializedObject(t)
-                il.Emit(OpCodes.Ldtoken, t);
-                il.Emit(OpCodes.Call, m_get_type_from_handle);
-                //create object
-                il.Emit(OpCodes.Call, m_new_uninit_obj);
-            }
-        }
+        internal static MethodInfo m_new_uninit_obj = typeof(FormatterServices).GetMethod("GetUninitializedObject");
+        internal const BindingFlags FInternalStatic = BindingFlags.Static | BindingFlags.NonPublic;
+
+        #endregion Internal Fields
+
+        #region Private Fields
+
+        private static ConcurrentDictionary<Type, Func<object>> m_map = new ConcurrentDictionary<Type, Func<object>>();
+        private static ConcurrentDictionary<Type, Func<object, object>> m_swallow_clone_map = new ConcurrentDictionary<Type, Func<object, object>>();
+        private static ConcurrentDictionary<Type, Func<object, Dictionary<object, object>, object>> m_deep_clone_map = new ConcurrentDictionary<Type, Func<object, Dictionary<object, object>, object>>();
+
+        #endregion Private Fields
+
+        #region Public Methods
+
         /// <summary>
         /// Constructor initialise object create func for type, use constructor without params
         /// </summary>
@@ -155,6 +268,7 @@ namespace EP.Ex
             }
             return f();
         }
+
         /// <summary>
         /// Create new object
         /// </summary>
@@ -164,9 +278,130 @@ namespace EP.Ex
         {
             return Obj<T>.c_tor();
         }
+
         public static T ShallowCopy<T>(T obj)
         {
-            return Obj<T>.m_shallowcopy(obj);
+            return (T)ShallowCopy((object)obj);
         }
+
+        internal static object m_shallow_copy_fn<T>(object obj)
+        {
+            return (object)Obj<T>.m_shallowcopy((T)obj);
+        }
+
+        public static object ShallowCopy(object obj)
+        {
+            if (obj == null)
+            {
+                return obj;
+            }
+            var ot = obj.GetType();
+            Func<object, object> fn;
+            if (!m_swallow_clone_map.TryGetValue(ot, out fn))
+            {
+                var gm = typeof(Obj).GetMethod("m_shallow_copy_fn", FInternalStatic);
+                var method = gm.MakeGenericMethod(ot);
+                fn = m_swallow_clone_map[ot] = (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), method);
+            }
+            return fn(obj);
+        }
+
+        public static T DeepCopy<T>(T obj)
+        {
+            return (T)DeepCopy((object)obj);
+        }
+
+        public static object DeepCopy(object obj)
+        {
+#if DEBUG
+            var dic = new Dictionary<object, object>();
+            var o = m_deepcopy(obj, dic);
+            return o;
+#else
+            return m_deepcopy(obj, new Dictionary<object, object>());
+#endif
+        }
+
+        #endregion Public Methods
+
+        #region Internal Methods
+
+        internal static object m_deepcopy_fn<T>(object obj, Dictionary<object, object> dict)
+        {
+            return (object)Obj<T>.m_deepcopy((T)obj, dict);
+        }
+
+        internal static object m_deepcopy(object obj, Dictionary<object, object> dic)
+        {
+            if (obj == null)
+                return obj;
+            var ot = obj.GetType();
+            if (ot.IsSimple())
+            {
+                return ot;
+            }
+            object o;
+            if (!dic.TryGetValue(obj, out o))
+            {
+                Func<object, Dictionary<object, object>, object> fn;
+                if (!m_deep_clone_map.TryGetValue(ot, out fn))
+                {
+                    var gm = typeof(Obj).GetMethod("m_deepcopy_fn", FInternalStatic);
+                    var method = gm.MakeGenericMethod(ot);
+                    fn = m_deep_clone_map[ot] = (Func<object, Dictionary<object, object>, object>)Delegate.CreateDelegate(typeof(Func<object, Dictionary<object, object>, object>), method);
+                }
+                return dic[obj] = fn(obj, dic);
+            }
+            return o;
+        }
+
+        internal static void m_create_new_generate(ILGenerator il, Type t)
+        {
+            if (t.IsValueType)
+            {
+                m_initsruct_generate(il, t);
+            }
+            else
+            {
+                var c = t.GetConstructor(new Type[] { });
+                il.Emit(OpCodes.Newobj, c);
+            }
+        }
+
+        internal static void m_create_uninit_generate(ILGenerator il, Type t)
+        {
+            if (t.IsValueType)
+            {
+                m_initsruct_generate(il, t);
+            }
+            else
+            {
+                /// call FormatterServices.GetUninitializedObject(t)
+                il.Emit(OpCodes.Ldtoken, t);
+                il.Emit(OpCodes.Call, m_get_type_from_handle);
+
+                //create object
+                il.Emit(OpCodes.Call, m_new_uninit_obj);
+            }
+        }
+
+        internal static FieldInfo[] m_get_flds(Type t)
+        {
+            return t.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public); ;
+        }
+
+        #endregion Internal Methods
+
+        #region Private Methods
+
+        private static void m_initsruct_generate(ILGenerator il, Type t)
+        {
+            var vt = il.DeclareLocal(t);
+            il.Emit(OpCodes.Ldloca_S, vt);
+            il.Emit(OpCodes.Initobj, t);
+            il.Emit(OpCodes.Ldloc_S, vt);
+        }
+
+        #endregion Private Methods
     }
 }
