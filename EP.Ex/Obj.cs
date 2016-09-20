@@ -17,6 +17,7 @@ namespace EP.Ex
 
         internal static Func<T> c_tor;
         internal static Func<T, T> m_shallowcopy;
+
         internal static Func<T, Dictionary<object, object>, T> m_deepcopy;
         internal const BindingFlags FInternalStatic = Obj.FInternalStatic;
 
@@ -31,7 +32,13 @@ namespace EP.Ex
         {
             c_tor = m_c_tor_func();
             m_shallowcopy = m_shallowcopy_func();
-            m_deepcopy = m_deepcopy_func();
+
+            //init lazy initialization deep cloning
+            m_deepcopy = (x, y) =>
+            {
+                m_deepcopy = m_deepcopy_func();
+                return m_deepcopy(x, y);
+            };
         }
 
         #endregion Public Constructors
@@ -59,7 +66,10 @@ namespace EP.Ex
         private static Func<T> m_c_tor_func()
         {
             var t = typeof(T);
-
+            if (t == typeof(object) || t.IsArray)
+            {
+                return null;
+            }
             DynamicMethod creator = new DynamicMethod(string.Empty,
                         t,
                         new Type[] { },
@@ -73,6 +83,11 @@ namespace EP.Ex
         private static Func<T, T> m_shallowcopy_func()
         {
             var t = typeof(T);
+            if (t.IsArray)
+            {
+                var method = m_arr_copy_mi(t);
+                return (Func<T, T>)Delegate.CreateDelegate(typeof(Func<T, T>), method);
+            }
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t }, t, true);
             ILGenerator il = creator.GetILGenerator();
 
@@ -128,6 +143,21 @@ namespace EP.Ex
             return dst;
         }
 
+        private static T[] m_copy_array(T[] src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+            T[] dst;
+            dst = new T[src.Length];
+            if (src.Length != 0)
+            {
+                Array.Copy(src, dst, src.Length);
+            }
+            return dst;
+        }
+
         private static void m_addtodict(T oldobj, T newobj, Dictionary<object, object> dic)
         {
             dic[oldobj] = newobj;
@@ -135,9 +165,35 @@ namespace EP.Ex
             //return newobj;
         }
 
+        private static MethodInfo m_arr_deepcopy_mi(Type t)
+        {
+            var arrt = t.GetElementType();
+            return typeof(Obj<>).MakeGenericType(arrt).GetMethod("m_deepcopy_array", FInternalStatic);
+        }
+
+        private static MethodInfo m_arr_copy_mi(Type t)
+        {
+            var arrt = t.GetElementType();
+            return typeof(Obj<>).MakeGenericType(arrt).GetMethod("m_copy_array", FInternalStatic);
+        }
+
+        public static void SetDeepCopyFn(Func<T, Dictionary<object, object>, T> fn)
+        {
+            m_deepcopy = fn;
+        }
+
         private static Func<T, Dictionary<object, object>, T> m_deepcopy_func()
         {
             var t = typeof(T);
+            if (t.IsArray)
+            {
+                var method = m_arr_deepcopy_mi(t);
+                return (Func<T, Dictionary<object, object>, T>)Delegate.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>), method);
+
+                //il.Emit(OpCodes.Ldarg_0);//[stack:obj]
+                //il.Emit(OpCodes.Ldarg_1);//[stack:obj,dict]
+                //il.Emit(OpCodes.Call, method);//[stack:new obj]
+            }
             var dic_t = typeof(Dictionary<object, object>);
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t, dic_t }, t, true);
             ILGenerator il = creator.GetILGenerator();
@@ -146,17 +202,17 @@ namespace EP.Ex
             //value type simple return from arg
             if (t.IsSimple())
             {
-                il.Emit(OpCodes.Ldarg_S, 0);
+                il.Emit(OpCodes.Ldarg_S, 0);//[stack: obj]
             }
             else
             {
-                Obj.m_create_uninit_generate(il, t);
+                Obj.m_create_uninit_generate(il, t);//[stack:new uninited obj]
                 LocalBuilder va = il.DeclareLocal(t);
-                il.Emit(OpCodes.Stloc_S, va);
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldloc_S, va);
-                il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Call, addmethod);
+                il.Emit(OpCodes.Stloc_S, va);//[stack:]
+                il.Emit(OpCodes.Ldarg_0);//[stack: obj]
+                il.Emit(OpCodes.Ldloc_S, va);//[stack: obj,new uninited obj]
+                il.Emit(OpCodes.Ldarg_1);//[stack: obj,new uninited obj,dict]
+                il.Emit(OpCodes.Call, addmethod);//[stack:]
                 var flds = Obj.m_get_flds(t);
                 if (flds != null && flds.Length > 0)
                 {
@@ -168,48 +224,47 @@ namespace EP.Ex
                         bool box = false;
                         if (t.IsValueType)
                         {
-                            il.Emit(OpCodes.Ldloca_S, va);
+                            il.Emit(OpCodes.Ldloca_S, va);//[stack:addr new uninited obj]
                         }
                         else
                         {
-                            il.Emit(OpCodes.Ldloc_S, va);
+                            il.Emit(OpCodes.Ldloc_S, va);//[stack:new uninited obj]
                         }
-                        il.Emit(OpCodes.Ldarg_S, 0);
-                        il.Emit(OpCodes.Ldfld, fi);
+                        il.Emit(OpCodes.Ldarg_S, 0);//[stack:new obj
+                        il.Emit(OpCodes.Ldfld, fi);//[stack:new obj,fldvalue]
                         if (ft.IsArray)
                         {
-                            var arrt = ft.GetElementType();
-                            var ct = typeof(Obj<>).MakeGenericType(arrt).GetMethod("m_deepcopy_array", FInternalStatic);
-                            il.Emit(OpCodes.Ldarg_S, 1);
-                            il.Emit(OpCodes.Call, ct);
+                            var ct = m_arr_deepcopy_mi(ft);
+                            il.Emit(OpCodes.Ldarg_S, 1); ;//[stack:new obj,fldvalue,dict]
+                            il.Emit(OpCodes.Call, ct); ;//[stack:new obj,new fldvalue]
                         }
                         else if (!simple)
                         {
                             box = ft.IsValueType;
                             if (box)
                             {
-                                il.Emit(OpCodes.Box, ft);
+                                il.Emit(OpCodes.Box, ft);//[stack:new obj,(object)fldvalue]
                             }
                             else
                             {
-                                il.Emit(OpCodes.Castclass, typeof(object));
+                                il.Emit(OpCodes.Castclass, typeof(object));//[stack: new obj, (object)fldvalue]
                             }
                             var dc = typeof(Obj).GetMethod("m_deepcopy", FInternalStatic);
-                            il.Emit(OpCodes.Ldarg_S, 1);
-                            il.Emit(OpCodes.Call, dc);
+                            il.Emit(OpCodes.Ldarg_S, 1);//[stack: new obj, (object)fldvalue,dict]
+                            il.Emit(OpCodes.Call, dc);//[stack: new obj, (object)new fldvalue]
                             if (box)
                             {
-                                il.Emit(OpCodes.Unbox, ft);
+                                il.Emit(OpCodes.Unbox, ft);//[stack: new obj, new fldvalue]
                             }
                             else
                             {
-                                il.Emit(OpCodes.Castclass, ft);
+                                il.Emit(OpCodes.Castclass, ft);//[stack: new obj, new fldvalue]
                             }
                         }
-                        il.Emit(OpCodes.Stfld, fi);
+                        il.Emit(OpCodes.Stfld, fi);//[stack:]
                     }
                 }
-                il.Emit(OpCodes.Ldloc_S, va);
+                il.Emit(OpCodes.Ldloc_S, va);//[stack:new obj]
             }
             il.Emit(OpCodes.Ret);
             return (Func<T, Dictionary<object, object>, T>)creator.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>));
@@ -338,7 +393,7 @@ namespace EP.Ex
             var ot = obj.GetType();
             if (ot.IsSimple())
             {
-                return ot;
+                return obj;
             }
             object o;
             if (!dic.TryGetValue(obj, out o))
