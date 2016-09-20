@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace EP.Ex.Tests
 {
@@ -145,7 +146,7 @@ namespace EP.Ex.Tests
         [TestMethod()]
         public void NewVsDeepCopyPerformanceTest()
         {
-            const int count = 10000;
+            const int count = 100000;
             Stopwatch stopwatch = Stopwatch.StartNew();
             for (int i = 0; i < count; ++i)
             {
@@ -158,7 +159,7 @@ namespace EP.Ex.Tests
             stopwatch.Restart();
             for (int i = 0; i < count; ++i)
             {
-                var obj = Obj.DeepCopy(co);
+                var obj = (object)Obj.DeepCopy((object)co);
             }
             stopwatch.Stop();
             Console.WriteLine("Obj.DeepCopy : {0} ms", stopwatch.ElapsedMilliseconds);
@@ -213,20 +214,49 @@ namespace EP.Ex.Tests
 
         #endregion Private Structs
 
+        public static Dictionary<object, object> CloneDict(Dictionary<object, object> src, Dictionary<object, object> dict)
+        {
+            var dst = new Dictionary<object, object>();
+            object key;
+            object value;
+            foreach (var p in src)
+            {
+                if (!dict.TryGetValue(p.Key, out key))
+                {
+                    key = dict[p.Key] = p.Key.DeepCopy();
+                }
+                if (!dict.TryGetValue(p.Value, out value))
+                {
+                    value = dict[p.Value] = p.Value.DeepCopy();
+                }
+                dst[key] = value;
+            }
+            return dst;
+        }
+
         [TestMethod()]
         public void DeepCopyTest()
         {
             const string str = "231231";
+            object[] arr = new object[2] { 1, "str" };
+
+            var p = Obj<object[]>.ShallowCopy(arr);
             DeepTestClass t = Obj<DeepTestClass>.New();
             t.Linked = new DeepTestClass();
             t.Linked.Linked = t;
             t.Str = str + str;
-
+            var arr2 = arr.DeepCopy();
             K s;
             s.Field = 1;
             s.t = new TestClass();
             var t1 = Obj.DeepCopy(t);
             var s1 = Obj.DeepCopy(s);
+            Dictionary<object, object> d = new Dictionary<object, object>() { { t, t } };
+            Obj<Dictionary<object, object>>.SetDeepCopyFn(CloneDict);
+            var d2 = d.DeepCopy();
+            var k = d2.Keys.First();
+            var k1 = d2[k];
+            Assert.IsTrue(k == k1);
             Assert.IsNotNull(t);
             Assert.IsNotNull(t1);
             Assert.IsInstanceOfType(t1, typeof(DeepTestClass));
