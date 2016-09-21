@@ -252,7 +252,8 @@ namespace EP.Ex.Tests
             var t1 = Obj.DeepCopy(t);
             var s1 = Obj.DeepCopy(s);
             Dictionary<object, object> d = new Dictionary<object, object>() { { t, t } };
-            Obj<Dictionary<object, object>>.SetDeepCopyFn(CloneDict);
+
+            //Obj<Dictionary<object, object>>.SetDeepCopyFn(CloneDict);
             var d2 = d.DeepCopy();
             var k = d2.Keys.First();
             var k1 = d2[k];

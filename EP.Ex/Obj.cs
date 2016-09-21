@@ -182,6 +182,33 @@ namespace EP.Ex
             m_deepcopy = fn;
         }
 
+        private static Dictionary<K, V> m_deep_copy_dict<K, V>(Dictionary<K, V> src, Dictionary<object, object> dict)
+        {
+            var dst = new Dictionary<K, V>(src.Count, src.Comparer);
+            object key;
+            object value;
+            foreach (var p in src)
+            {
+                if (!dict.TryGetValue(p.Key, out key))
+                {
+                    key = Obj.DeepCopy(p.Key, dict);
+                }
+                if (p.Value != null)
+                {
+                    if (!dict.TryGetValue(p.Value, out value))
+                    {
+                        value = Obj.DeepCopy(p.Value, dict);
+                    }
+                }
+                else
+                {
+                    value = p.Value;
+                }
+                dst[(K)key] = (V)value;
+            }
+            return dst;
+        }
+
         private static Func<T, Dictionary<object, object>, T> m_deepcopy_func()
         {
             var t = typeof(T);
@@ -193,6 +220,17 @@ namespace EP.Ex
                 //il.Emit(OpCodes.Ldarg_0);//[stack:obj]
                 //il.Emit(OpCodes.Ldarg_1);//[stack:obj,dict]
                 //il.Emit(OpCodes.Call, method);//[stack:new obj]
+            }
+            if (t.IsGenericType)
+            {
+                var generic = t.GetGenericTypeDefinition();
+                if (generic == typeof(Dictionary<,>))
+                {
+                    Type keyType = t.GetGenericArguments()[0];
+                    Type valueType = t.GetGenericArguments()[1];
+                    var method = typeof(Obj<>).MakeGenericType(t).GetMethod("m_deep_copy_dict", FInternalStatic).MakeGenericMethod(keyType, valueType);
+                    return (Func<T, Dictionary<object, object>, T>)Delegate.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>), method);
+                }
             }
             var dic_t = typeof(Dictionary<object, object>);
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t, dic_t }, t, true);
@@ -361,19 +399,19 @@ namespace EP.Ex
             return fn(obj);
         }
 
-        public static T DeepCopy<T>(T obj)
+        public static T DeepCopy<T>(T obj, Dictionary<object, object> dict = null)
         {
-            return (T)DeepCopy((object)obj);
+            return (T)DeepCopy((object)obj, dict);
         }
 
-        public static object DeepCopy(object obj)
+        public static object DeepCopy(object obj, Dictionary<object, object> dict)
         {
 #if DEBUG
-            var dic = new Dictionary<object, object>();
+            var dic = dict ?? new Dictionary<object, object>();
             var o = m_deepcopy(obj, dic);
             return o;
 #else
-            return m_deepcopy(obj, new Dictionary<object, object>());
+            return m_deepcopy(obj, dict ?? new Dictionary<object, object>());
 #endif
         }
 
