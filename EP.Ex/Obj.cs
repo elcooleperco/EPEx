@@ -21,6 +21,7 @@ namespace EP.Ex
         internal static Func<T, Dictionary<object, object>, T> m_deepcopy;
         internal const BindingFlags FInternalStatic = Obj.FInternalStatic;
 
+
         #endregion Internal Fields
 
         #region Public Constructors
@@ -118,30 +119,7 @@ namespace EP.Ex
             return (Func<T, T>)creator.CreateDelegate(typeof(Func<T, T>));
         }
 
-        private static T[] m_deepcopy_array(T[] src, Dictionary<object, object> dic)
-        {
-            var t = typeof(T);
-            object o;
-            T[] dst;
-            if (dic.TryGetValue(src, out o))
-            {
-                return (T[])o;
-            }
-            dst = new T[src.Length];
-            if (t.IsSimple())
-            {
-                Array.Copy(src, dst, src.Length);
-            }
-            else
-            {
-                dic[src] = dst;
-                for (int i = 0; i < src.Length; ++i)
-                {
-                    dst[i] = (T)Obj.m_deepcopy(src[i], dic);
-                }
-            }
-            return dst;
-        }
+
 
         private static T[] m_copy_array(T[] src)
         {
@@ -165,11 +143,6 @@ namespace EP.Ex
             //return newobj;
         }
 
-        private static MethodInfo m_arr_deepcopy_mi(Type t)
-        {
-            var arrt = t.GetElementType();
-            return typeof(Obj<>).MakeGenericType(arrt).GetMethod("m_deepcopy_array", FInternalStatic);
-        }
 
         private static MethodInfo m_arr_copy_mi(Type t)
         {
@@ -182,55 +155,22 @@ namespace EP.Ex
             m_deepcopy = fn;
         }
 
-        private static Dictionary<K, V> m_deep_copy_dict<K, V>(Dictionary<K, V> src, Dictionary<object, object> dict)
-        {
-            var dst = new Dictionary<K, V>(src.Count, src.Comparer);
-            object key;
-            object value;
-            foreach (var p in src)
-            {
-                if (!dict.TryGetValue(p.Key, out key))
-                {
-                    key = Obj.DeepCopy(p.Key, dict);
-                }
-                if (p.Value != null)
-                {
-                    if (!dict.TryGetValue(p.Value, out value))
-                    {
-                        value = Obj.DeepCopy(p.Value, dict);
-                    }
-                }
-                else
-                {
-                    value = p.Value;
-                }
-                dst[(K)key] = (V)value;
-            }
-            return dst;
-        }
-
         private static Func<T, Dictionary<object, object>, T> m_deepcopy_func()
         {
             var t = typeof(T);
-            if (t.IsArray)
-            {
-                var method = m_arr_deepcopy_mi(t);
-                return (Func<T, Dictionary<object, object>, T>)Delegate.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>), method);
+            //if (t.IsArray)
+            //{
+            //    var method = m_arr_deepcopy_mi(t);
+            //    return (Func<T, Dictionary<object, object>, T>)Delegate.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>), method);
 
-                //il.Emit(OpCodes.Ldarg_0);//[stack:obj]
-                //il.Emit(OpCodes.Ldarg_1);//[stack:obj,dict]
-                //il.Emit(OpCodes.Call, method);//[stack:new obj]
-            }
-            if (t.IsGenericType)
+            //    //il.Emit(OpCodes.Ldarg_0);//[stack:obj]
+            //    //il.Emit(OpCodes.Ldarg_1);//[stack:obj,dict]
+            //    //il.Emit(OpCodes.Call, method);//[stack:new obj]
+            //}
+            var o = CopyBaseHelper.DeepCopyFunc<T>();
+            if (o != null)
             {
-                var generic = t.GetGenericTypeDefinition();
-                if (generic == typeof(Dictionary<,>))
-                {
-                    Type keyType = t.GetGenericArguments()[0];
-                    Type valueType = t.GetGenericArguments()[1];
-                    var method = typeof(Obj<>).MakeGenericType(t).GetMethod("m_deep_copy_dict", FInternalStatic).MakeGenericMethod(keyType, valueType);
-                    return (Func<T, Dictionary<object, object>, T>)Delegate.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>), method);
-                }
+                return o;
             }
             var dic_t = typeof(Dictionary<object, object>);
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t, dic_t }, t, true);
@@ -270,13 +210,13 @@ namespace EP.Ex
                         }
                         il.Emit(OpCodes.Ldarg_S, 0);//[stack:new obj
                         il.Emit(OpCodes.Ldfld, fi);//[stack:new obj,fldvalue]
-                        if (ft.IsArray)
-                        {
-                            var ct = m_arr_deepcopy_mi(ft);
-                            il.Emit(OpCodes.Ldarg_S, 1); ;//[stack:new obj,fldvalue,dict]
-                            il.Emit(OpCodes.Call, ct); ;//[stack:new obj,new fldvalue]
-                        }
-                        else if (!simple)
+                        //if (ft.IsArray)
+                        //{
+                        //    var ct = m_arr_deepcopy_mi(ft);
+                        //    il.Emit(OpCodes.Ldarg_S, 1); ;//[stack:new obj,fldvalue,dict]
+                        //    il.Emit(OpCodes.Call, ct); ;//[stack:new obj,new fldvalue]
+                        //}
+                        if (!simple)
                         {
                             box = ft.IsValueType;
                             if (box)
@@ -321,6 +261,7 @@ namespace EP.Ex
         internal static MethodInfo m_get_type_from_handle = typeof(Type).GetMethod("GetTypeFromHandle");
         internal static MethodInfo m_new_uninit_obj = typeof(FormatterServices).GetMethod("GetUninitializedObject");
         internal const BindingFlags FInternalStatic = BindingFlags.Static | BindingFlags.NonPublic;
+        internal const BindingFlags FPublicStatic = BindingFlags.Static | BindingFlags.Public;
 
         #endregion Internal Fields
 

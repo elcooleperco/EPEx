@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -30,7 +31,7 @@ namespace EP.Ex.Tests
 
             public Dictionary<string, object> Dict = new Dictionary<string, object>();
             public string Str;
-
+            public int[] Arr;
             #endregion Public Fields
 
             #region Public Constructors
@@ -41,6 +42,7 @@ namespace EP.Ex.Tests
             {
                 Str = "Test Str";
                 Dict["Me"] = this;
+                Arr = new int[4] { 1, 234, 432, 1 };
             }
 
             #endregion Public Constructors
@@ -257,6 +259,14 @@ namespace EP.Ex.Tests
             var d2 = d.DeepCopy();
             var k = d2.Keys.First();
             var k1 = d2[k];
+            HashSet<DeepTestClass> hs = new HashSet<DeepTestClass>();
+            hs.Add(t);
+            hs.Add(t1);
+            Hashtable ht = new Hashtable();
+            ht[t] = t;
+            ht[t1] = t1;
+            var htc = ht.DeepCopy();
+            var hsc = hs.DeepCopy();
             Assert.IsTrue(k == k1);
             Assert.IsNotNull(t);
             Assert.IsNotNull(t1);
@@ -264,6 +274,14 @@ namespace EP.Ex.Tests
             Assert.IsInstanceOfType(s1, typeof(K));
             Assert.AreEqual(t1.Str, t.Str);
             Assert.AreEqual(s1.Field, s.Field);
+            Assert.AreEqual(hs.Count, hsc.Count);
+            Assert.IsFalse(Object.ReferenceEquals(hs.ElementAt(0), hsc.ElementAt(0)));
+            Assert.AreEqual(ht.Count, htc.Count);
+            Assert.IsFalse(Object.ReferenceEquals(ht, htc));
+            foreach (var h in htc.Keys)
+            {
+                Assert.IsTrue(Object.ReferenceEquals(htc[h], h));
+            }
             Assert.IsFalse(Assert.ReferenceEquals(t, t1));
             Assert.IsFalse(Assert.ReferenceEquals(s.t, s1.t));
         }
