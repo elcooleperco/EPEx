@@ -16,11 +16,11 @@ namespace EP.Ex
             if (t.IsArray)
             {
                 var arrt = t.GetElementType();
-                return typeof(CopyBaseHelper).GetMethod("m_deepcopy_array", FInternalStatic).MakeGenericMethod(arrt);
+                return typeof(CopyBaseHelper).GetMethod(nameof(CopyBaseHelper.m_deepcopy_array), FInternalStatic).MakeGenericMethod(arrt);
             }
             if (t == typeof(Hashtable))
             {
-                return typeof(CopyBaseHelper).GetMethod("m_deep_copy_hashtable", FPublicStatic);
+                return typeof(CopyBaseHelper).GetMethod(nameof(CopyBaseHelper.m_deep_copy_hashtable), FPublicStatic);
 
             }
             if (t.IsGenericType)
@@ -30,12 +30,12 @@ namespace EP.Ex
                 {
                     Type keyType = t.GetGenericArguments()[0];
                     Type valueType = t.GetGenericArguments()[1];
-                    return typeof(CopyBaseHelper).GetMethod("m_deep_copy_dict", FPublicStatic).MakeGenericMethod(keyType, valueType);
+                    return typeof(CopyBaseHelper).GetMethod(nameof(CopyBaseHelper.m_deep_copy_dict), FPublicStatic).MakeGenericMethod(keyType, valueType);
                 }
                 else if (generic == typeof(HashSet<>))
                 {
                     Type valueType = t.GetGenericArguments()[0];
-                    return typeof(CopyBaseHelper).GetMethod("m_deep_copy_hashset", FPublicStatic).MakeGenericMethod(valueType);
+                    return typeof(CopyBaseHelper).GetMethod(nameof(CopyBaseHelper.m_deep_copy_hashset), FPublicStatic).MakeGenericMethod(valueType);
                 }
             }
             return null;

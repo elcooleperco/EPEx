@@ -147,7 +147,7 @@ namespace EP.Ex
         private static MethodInfo m_arr_copy_mi(Type t)
         {
             var arrt = t.GetElementType();
-            return typeof(Obj<>).MakeGenericType(arrt).GetMethod("m_copy_array", FInternalStatic);
+            return typeof(Obj<>).MakeGenericType(arrt).GetMethod(nameof(Obj<object>.m_copy_array), FInternalStatic);
         }
 
         public static void SetDeepCopyFn(Func<T, Dictionary<object, object>, T> fn)
@@ -175,7 +175,7 @@ namespace EP.Ex
             var dic_t = typeof(Dictionary<object, object>);
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t, dic_t }, t, true);
             ILGenerator il = creator.GetILGenerator();
-            var addmethod = typeof(Obj<T>).GetMethod("m_addtodict", FInternalStatic);
+            var addmethod = typeof(Obj<T>).GetMethod(nameof(Obj<T>.m_addtodict), FInternalStatic);
 
             //value type simple return from arg
             if (t.IsSimple())
@@ -227,7 +227,7 @@ namespace EP.Ex
                             {
                                 il.Emit(OpCodes.Castclass, typeof(object));//[stack: new obj, (object)fldvalue]
                             }
-                            var dc = typeof(Obj).GetMethod("m_deepcopy", FInternalStatic);
+                            var dc = typeof(Obj).GetMethod(nameof(Obj.m_deepcopy), FInternalStatic);
                             il.Emit(OpCodes.Ldarg_S, 1);//[stack: new obj, (object)fldvalue,dict]
                             il.Emit(OpCodes.Call, dc);//[stack: new obj, (object)new fldvalue]
                             if (box)
@@ -258,8 +258,8 @@ namespace EP.Ex
     {
         #region Internal Fields
 
-        internal static MethodInfo m_get_type_from_handle = typeof(Type).GetMethod("GetTypeFromHandle");
-        internal static MethodInfo m_new_uninit_obj = typeof(FormatterServices).GetMethod("GetUninitializedObject");
+        internal static MethodInfo m_get_type_from_handle = typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle));
+        internal static MethodInfo m_new_uninit_obj = typeof(FormatterServices).GetMethod(nameof(FormatterServices.GetUninitializedObject));
         internal const BindingFlags FInternalStatic = BindingFlags.Static | BindingFlags.NonPublic;
         internal const BindingFlags FPublicStatic = BindingFlags.Static | BindingFlags.Public;
 
@@ -333,7 +333,7 @@ namespace EP.Ex
             Func<object, object> fn;
             if (!m_swallow_clone_map.TryGetValue(ot, out fn))
             {
-                var gm = typeof(Obj).GetMethod("m_shallow_copy_fn", FInternalStatic);
+                var gm = typeof(Obj).GetMethod(nameof(Obj.m_shallow_copy_fn), FInternalStatic);
                 var method = gm.MakeGenericMethod(ot);
                 fn = m_swallow_clone_map[ot] = (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), method);
             }
@@ -347,12 +347,13 @@ namespace EP.Ex
 
         public static object DeepCopy(object obj, Dictionary<object, object> dict)
         {
+
+            var dic = dict ?? new Dictionary<object, object>(ReferenceComparer.Instance);
 #if DEBUG
-            var dic = dict ?? new Dictionary<object, object>();
             var o = m_deepcopy(obj, dic);
             return o;
 #else
-            return m_deepcopy(obj, dict ?? new Dictionary<object, object>());
+            return m_deepcopy(obj, dic);
 #endif
         }
 
@@ -380,9 +381,10 @@ namespace EP.Ex
                 Func<object, Dictionary<object, object>, object> fn;
                 if (!m_deep_clone_map.TryGetValue(ot, out fn))
                 {
-                    var gm = typeof(Obj).GetMethod("m_deepcopy_fn", FInternalStatic);
+                    var gm = typeof(Obj).GetMethod(nameof(Obj.m_deepcopy_fn), FInternalStatic);
                     var method = gm.MakeGenericMethod(ot);
-                    fn = m_deep_clone_map[ot] = (Func<object, Dictionary<object, object>, object>)Delegate.CreateDelegate(typeof(Func<object, Dictionary<object, object>, object>), method);
+                    fn = m_deep_clone_map[ot] = (Func<object, Dictionary<object, object>, object>)
+                        Delegate.CreateDelegate(typeof(Func<object, Dictionary<object, object>, object>), method);
                 }
                 return dic[obj] = fn(obj, dic);
             }

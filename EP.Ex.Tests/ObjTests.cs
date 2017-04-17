@@ -285,5 +285,12 @@ namespace EP.Ex.Tests
             Assert.IsFalse(Assert.ReferenceEquals(t, t1));
             Assert.IsFalse(Assert.ReferenceEquals(s.t, s1.t));
         }
+        [TestMethod()]
+        public void DeepCopyHSTest()
+        {
+            var ht1 = new HashSet<object>(new object[] { "test", 1, 2, 3, 4, 5 });
+            var ht2 = ht1.DeepCopy();
+            Assert.IsFalse(Assert.ReferenceEquals(ht1, ht2));
+        }
     }
 }
