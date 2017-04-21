@@ -21,7 +21,6 @@ namespace EP.Ex
         internal static Func<T, Dictionary<object, object>, T> m_deepcopy;
         internal const BindingFlags FInternalStatic = Obj.FInternalStatic;
 
-
         #endregion Internal Fields
 
         #region Public Constructors
@@ -55,6 +54,11 @@ namespace EP.Ex
             return c_tor();
         }
 
+        /// <summary>
+        /// Create shallow copy of object
+        /// </summary>
+        /// <param name="obj">Initial object</param>
+        /// <returns>Shallow copy of object</returns>
         public static T ShallowCopy(T obj)
         {
             return m_shallowcopy(obj);
@@ -64,6 +68,10 @@ namespace EP.Ex
 
         #region Private Methods
 
+        /// <summary>
+        /// Get constructor of object
+        /// </summary>
+        /// <returns>Return cunstructor as delegate, without parameters</returns>
         private static Func<T> m_c_tor_func()
         {
             var t = typeof(T);
@@ -81,6 +89,10 @@ namespace EP.Ex
             return (Func<T>)creator.CreateDelegate(typeof(Func<T>));
         }
 
+        /// <summary>
+        /// Get delegate function that create shallow copy of object
+        /// </summary>
+        /// <returns>Delegate</returns>
         private static Func<T, T> m_shallowcopy_func()
         {
             var t = typeof(T);
@@ -119,8 +131,11 @@ namespace EP.Ex
             return (Func<T, T>)creator.CreateDelegate(typeof(Func<T, T>));
         }
 
-
-
+        /// <summary>
+        /// Create copy of Array
+        /// </summary>
+        /// <param name="src">Source array</param>
+        /// <returns>Copy of array</returns>
         private static T[] m_copy_array(T[] src)
         {
             if (src == null)
@@ -136,6 +151,12 @@ namespace EP.Ex
             return dst;
         }
 
+        /// <summary>
+        /// Add element to dictionary
+        /// </summary>
+        /// <param name="oldobj">key object</param>
+        /// <param name="newobj">value object</param>
+        /// <param name="dic">target dictionary</param>
         private static void m_addtodict(T oldobj, T newobj, Dictionary<object, object> dic)
         {
             dic[oldobj] = newobj;
@@ -143,21 +164,34 @@ namespace EP.Ex
             //return newobj;
         }
 
-
+        /// <summary>
+        /// Get method info of array copym_copy_array
+        /// </summary>
+        /// <param name="t">generic type</param>
+        /// <returns>Method info</returns>
         private static MethodInfo m_arr_copy_mi(Type t)
         {
             var arrt = t.GetElementType();
             return typeof(Obj<>).MakeGenericType(arrt).GetMethod(nameof(Obj<object>.m_copy_array), FInternalStatic);
         }
 
+        /// <summary>
+        /// Override default Deep Copy function
+        /// </summary>
+        /// <param name="fn">Overrided clone function</param>
         public static void SetDeepCopyFn(Func<T, Dictionary<object, object>, T> fn)
         {
             m_deepcopy = fn;
         }
 
+        /// <summary>
+        /// Get default deep copy function
+        /// </summary>
+        /// <returns>delegate that create deep copy</returns>
         private static Func<T, Dictionary<object, object>, T> m_deepcopy_func()
         {
             var t = typeof(T);
+
             //if (t.IsArray)
             //{
             //    var method = m_arr_deepcopy_mi(t);
@@ -210,6 +244,7 @@ namespace EP.Ex
                         }
                         il.Emit(OpCodes.Ldarg_S, 0);//[stack:new obj
                         il.Emit(OpCodes.Ldfld, fi);//[stack:new obj,fldvalue]
+
                         //if (ft.IsArray)
                         //{
                         //    var ct = m_arr_deepcopy_mi(ft);
@@ -313,6 +348,12 @@ namespace EP.Ex
             return Obj<T>.c_tor();
         }
 
+        /// <summary>
+        /// Create shallow copy of object
+        /// </summary>
+        /// <typeparam name="T">Copied object type</typeparam>
+        /// <param name="obj">Source Object</param>
+        /// <returns></returns>
         public static T ShallowCopy<T>(T obj)
         {
             return (T)ShallowCopy((object)obj);
@@ -323,6 +364,11 @@ namespace EP.Ex
             return (object)Obj<T>.m_shallowcopy((T)obj);
         }
 
+        /// <summary>
+        /// Create shallow copy of object
+        /// </summary>
+        /// <param name="obj">source object</param>
+        /// <returns>Object copy</returns>
         public static object ShallowCopy(object obj)
         {
             if (obj == null)
@@ -340,14 +386,30 @@ namespace EP.Ex
             return fn(obj);
         }
 
+        /// <summary>
+        /// Create Deep copy of object
+        /// </summary>
+        /// <typeparam name="T">Type of copying object</typeparam>
+        /// <param name="obj">Source object</param>
+        /// <param name="dict">
+        /// Dictionary, that accumulate copies of objects, to have one object - one copy
+        /// </param>
+        /// <returns>Copy of object</returns>
         public static T DeepCopy<T>(T obj, Dictionary<object, object> dict = null)
         {
             return (T)DeepCopy((object)obj, dict);
         }
 
+        /// <summary>
+        /// Create Deep copy of object
+        /// </summary>
+        /// <param name="obj">Source object</param>
+        /// <param name="dict">
+        /// Dictionary, that accumulate copies of objects, to have one object - one copy
+        /// </param>
+        /// <returns>Copy of object</returns>
         public static object DeepCopy(object obj, Dictionary<object, object> dict)
         {
-
             var dic = dict ?? new Dictionary<object, object>(ReferenceComparer.Instance);
 #if DEBUG
             var o = m_deepcopy(obj, dic);
@@ -361,11 +423,28 @@ namespace EP.Ex
 
         #region Internal Methods
 
+        /// <summary>
+        /// Get deep copy of object
+        /// </summary>
+        /// <typeparam name="T">Type of copying object</typeparam>
+        /// <param name="obj">Copying object</param>
+        /// <param name="dict">
+        /// Dictionary, that accumulate copies of objects, to have one object - one copy
+        /// </param>
+        /// <returns>Copy of object</returns>
         internal static object m_deepcopy_fn<T>(object obj, Dictionary<object, object> dict)
         {
             return (object)Obj<T>.m_deepcopy((T)obj, dict);
         }
 
+        /// <summary>
+        /// Get deep copy of object
+        /// </summary>
+        /// <param name="obj">Copying object</param>
+        /// <param name="dic">
+        /// Dictionary, that accumulate copies of objects, to have one object - one copy
+        /// </param>
+        /// <returns>Copy of object</returns>
         internal static object m_deepcopy(object obj, Dictionary<object, object> dic)
         {
             if (obj == null)
@@ -391,6 +470,9 @@ namespace EP.Ex
             return o;
         }
 
+        /// <summary> Set instruction to create new object </summary> 
+        /// <param name="il">MSIL instruction generator<param> 
+        /// <param name="t">type of new object</param>
         internal static void m_create_new_generate(ILGenerator il, Type t)
         {
             if (t.IsValueType)
@@ -404,6 +486,8 @@ namespace EP.Ex
             }
         }
 
+        /// <summary> Set instruction to create new uninitialized object </summary> <param
+        /// name="il">MSIL instruction generator<param> <param name="t">type of new object</param
         internal static void m_create_uninit_generate(ILGenerator il, Type t)
         {
             if (t.IsValueType)
@@ -421,6 +505,11 @@ namespace EP.Ex
             }
         }
 
+        /// <summary>
+        /// Get list instance fields
+        /// </summary>
+        /// <param name="t">type of object</param>
+        /// <returns></returns>
         internal static FieldInfo[] m_get_flds(Type t)
         {
             return t.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public); ;
@@ -430,6 +519,8 @@ namespace EP.Ex
 
         #region Private Methods
 
+        /// <summary> Set instruction to init new structure </summary> <param name="il">MSIL
+        /// instruction generator<param> <param name="t">type of new struct</param
         private static void m_initsruct_generate(ILGenerator il, Type t)
         {
             var vt = il.DeclareLocal(t);

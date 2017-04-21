@@ -1,9 +1,17 @@
 ﻿namespace System
 {
+    /// <summary>
+    /// Type extension
+    /// </summary>
     public static class TypeEx
     {
         #region Public Methods
 
+        /// <summary>
+        /// Check is type is simple: Primitive,Enum, string, decimal
+        /// </summary>
+        /// <param name="type">Type</param>
+        /// <returns>True - if type is simple</returns>
         public static bool IsSimple(this Type type)
         {
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
