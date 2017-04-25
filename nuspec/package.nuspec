@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>EP.Ex</id>
+    <version>$version$</version>
+    <title>Copy(Clone) Object Extension</title>
+    <authors>ElCoolePerco</authors>
+    <owners>ElCoolePerco</owners>
+    <description>
+      Fast deep or shallow copy(clone), generating MSIL on fly runtime code compilation.
+    </description>
+    <releaseNotes>
+    </releaseNotes>
+    <summary>
+      Fast deep or shallow copy(clone), generating MSIL on fly runtime code compilation.
+    </summary>
+	<projectUrl>
+		https://github.com/elcooleperco/EPEx
+	</projectUrl>
+	<licenseUrl>
+		https://github.com/elcooleperco/EPEx/blob/master/LICENSE
+	</licenseUrl>
+    <language></language>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <copyright>Copyright ©  2016</copyright>
+    <dependencies>
+    </dependencies>
+    <references></references>
+    <tags>clone deep copy shallow deepcopy deepclone shallowcopy shallowclone</tags>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System" />
+    </frameworkAssemblies>
+  </metadata>
+  <files>
+    <file src="..\EP.Ex\bin\Release\EP.Ex.dll" target="lib\net40" />
+	<file src="..\EP.Ex\bin\Release\EP.Ex.pdb" target="lib\net40" />
+  </files>
+</package>
