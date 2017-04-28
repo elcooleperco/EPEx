@@ -1,4 +1,4 @@
-# EPEx
+# EP.Ex
 .Net extension that allows you to make a shallow and deep copy of an object.
 
 ## Remark
@@ -14,6 +14,10 @@ For each type of object, during the operation, the **MSIL** code is generated, c
 
 When the object is shallow copied, only the object is copied, all the reference (objects) of the field and the properties remain the same as for the original object. 
 If deep copying of the object takes place, then all the properties and fields of the object are also copied, while the rule is observed: one object-one copy, i.e. If the original object contains a link to itself or to an object copied earlier, within the current deep copy, then the copied object will also be in a single instance.
+
+## Installation
+NuGet, use
+`Install-Package EP.Ex`
 
 ### Example:
 ```csharp
