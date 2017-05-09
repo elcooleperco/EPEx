@@ -123,7 +123,7 @@ namespace EP.Ex.Tests
         {
             const string str = "231231";
             TestClass m = (TestClass)Obj.New(typeof(TestClass));
-            TestClass c = (TestClass)Obj.New<TestClass>();
+            TestClass c = Obj.New<TestClass>();
             TestClass k = (TestClass)Obj.New(typeof(TestClass));
             TestClass t = Obj<TestClass>.New();
             st1 s = Obj<st1>.New();
@@ -241,7 +241,7 @@ namespace EP.Ex.Tests
         {
             const string str = "231231";
             object[] arr = new object[2] { 1, "str" };
-
+            var obj1 = arr.ShallowCopy();
             var p = Obj<object[]>.ShallowCopy(arr);
             DeepTestClass t = Obj<DeepTestClass>.New();
             t.Linked = new DeepTestClass();
@@ -291,6 +291,13 @@ namespace EP.Ex.Tests
             var ht1 = new HashSet<object>(new object[] { "test", 1, 2, 3, 4, 5 });
             var ht2 = ht1.DeepCopy();
             Assert.IsFalse(Assert.ReferenceEquals(ht1, ht2));
+        }
+        [TestMethod()]
+        public void DeepCopyMultiArrayTest()
+        {
+            var ma1 = new object[2, 2, 2] { { { "test", 1 }, { 2, 2 } }, { { 3, 4 }, { "rer", 5 } } };
+            var ma2 = ma1.DeepCopy();
+            Assert.IsFalse(Assert.ReferenceEquals(ma1,ma2));
         }
     }
 }

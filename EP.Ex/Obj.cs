@@ -98,8 +98,7 @@ namespace EP.Ex
             var t = typeof(T);
             if (t.IsArray)
             {
-                var method = m_arr_copy_mi(t);
-                return (Func<T, T>)Delegate.CreateDelegate(typeof(Func<T, T>), method);
+                return m_arr_copy_mi();
             }
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t }, t, true);
             ILGenerator il = creator.GetILGenerator();
@@ -132,11 +131,11 @@ namespace EP.Ex
         }
 
         /// <summary>
-        /// Create copy of Array
+        /// Create copy of single dimention Array
         /// </summary>
         /// <param name="src">Source array</param>
         /// <returns>Copy of array</returns>
-        private static T[] m_copy_array(T[] src)
+        private static T[] m_copy_array_1d(T[] src)
         {
             if (src == null)
             {
@@ -150,7 +149,6 @@ namespace EP.Ex
             }
             return dst;
         }
-
         /// <summary>
         /// Add element to dictionary
         /// </summary>
@@ -169,10 +167,50 @@ namespace EP.Ex
         /// </summary>
         /// <param name="t">generic type</param>
         /// <returns>Method info</returns>
-        private static MethodInfo m_arr_copy_mi(Type t)
+        private static Func<T, T> m_arr_copy_mi()
         {
+            var t = typeof(T);
             var arrt = t.GetElementType();
-            return typeof(Obj<>).MakeGenericType(arrt).GetMethod(nameof(Obj<object>.m_copy_array), FInternalStatic);
+            var rank = t.GetArrayRank();
+            if (rank == 1)
+            {
+                var mi = typeof(Obj<>).MakeGenericType(arrt).GetMethod(nameof(Obj<object>.m_copy_array_1d), FInternalStatic);
+                return (Func<T, T>)Delegate.CreateDelegate(typeof(Func<T, T>), mi);
+            }
+            else
+            {
+                Type[] tis = new Type[rank];
+                LocalBuilder[] dim = new LocalBuilder[rank];
+
+                DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t }, t, true);
+
+                ILGenerator il = creator.GetILGenerator();
+                var dst = il.DeclareLocal(t);
+
+
+                for (int i = 0; i < rank; ++i)
+                {
+                    dim[i] = il.DeclareLocal(typeof(int));
+                    tis[i] = typeof(Int32);
+                }
+
+                var ctor = t.GetConstructor(tis);
+                var glen = typeof(Array).GetMethod("GetLength", BindingFlags.Public | BindingFlags.Instance);
+                var gub = typeof(Array).GetMethod("GetUpperBound", BindingFlags.Public | BindingFlags.Instance);
+                var gv = typeof(Array).GetMethod("Get", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var sv = typeof(Array).GetMethod("Set", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+                for (int i = 0; i < rank; ++i)
+                {
+                    il.Emit(OpCodes.Ldarg_0);//load argument
+                    il.Emit(OpCodes.Ldc_I4,i);
+                    //stack[array,rank]
+                    il.Emit(OpCodes.Call, glen);
+                    //remove prev [array,rank] append integer(value length on current rank(dim))
+                }
+                il.Emit(OpCodes.Call, ctor);//create Array same rank
+                il.Emit(OpCodes.Stloc, dst.LocalIndex);
+            }
         }
 
         /// <summary>
