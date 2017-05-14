@@ -292,12 +292,19 @@ namespace EP.Ex.Tests
             var ht2 = ht1.DeepCopy();
             Assert.IsFalse(Assert.ReferenceEquals(ht1, ht2));
         }
+        private object[,,,,] MulDimArr = new object[1, 1, 2, 2, 2] { { { { { "test", 1 }, { 2, 2 } }, { { 3, 4 }, { "rer", 5 } } } } };
+        [TestMethod()]
+        public void ShallowMultiArrayTest()
+        {
+
+            var ma2 = MulDimArr.ShallowCopy();
+            Assert.IsFalse(Assert.ReferenceEquals(MulDimArr, ma2));
+        }
         [TestMethod()]
         public void DeepCopyMultiArrayTest()
         {
-            var ma1 = new object[2, 2, 2] { { { "test", 1 }, { 2, 2 } }, { { 3, 4 }, { "rer", 5 } } };
-            var ma2 = ma1.DeepCopy();
-            Assert.IsFalse(Assert.ReferenceEquals(ma1,ma2));
+            var ma2 = MulDimArr.DeepCopy();
+            Assert.IsFalse(Assert.ReferenceEquals(MulDimArr, ma2));
         }
     }
 }

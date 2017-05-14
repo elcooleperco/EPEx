@@ -182,11 +182,10 @@ namespace EP.Ex
                 Type[] tis = new Type[rank];
                 LocalBuilder[] dim = new LocalBuilder[rank];
 
-                DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t }, t, true);
+                DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t }, typeof(Obj), true);
 
                 ILGenerator il = creator.GetILGenerator();
                 var dst = il.DeclareLocal(t);
-
 
                 for (int i = 0; i < rank; ++i)
                 {
@@ -196,20 +195,38 @@ namespace EP.Ex
 
                 var ctor = t.GetConstructor(tis);
                 var glen = typeof(Array).GetMethod("GetLength", BindingFlags.Public | BindingFlags.Instance);
-                var gub = typeof(Array).GetMethod("GetUpperBound", BindingFlags.Public | BindingFlags.Instance);
-                var gv = typeof(Array).GetMethod("Get", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                var sv = typeof(Array).GetMethod("Set", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
                 for (int i = 0; i < rank; ++i)
                 {
                     il.Emit(OpCodes.Ldarg_0);//load argument
-                    il.Emit(OpCodes.Ldc_I4,i);
+                    il.Emit(OpCodes.Ldc_I4, i);
                     //stack[array,rank]
                     il.Emit(OpCodes.Call, glen);
                     //remove prev [array,rank] append integer(value length on current rank(dim))
+                    il.Emit(OpCodes.Dup);
+                    il.Emit(OpCodes.Stloc_S, dim[i].LocalIndex);
                 }
-                il.Emit(OpCodes.Call, ctor);//create Array same rank
-                il.Emit(OpCodes.Stloc, dst.LocalIndex);
+
+                il.Emit(OpCodes.Newobj, ctor);//create Array same rank
+                il.Emit(OpCodes.Stloc_S, dst.LocalIndex);
+
+                var ca = typeof(Array).GetMethod("Copy", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(Array), typeof(Array), typeof(int) }, null);
+
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldloc_S, dst.LocalIndex);
+                //mul all ranks
+                for (int i = 0; i < rank; ++i)
+                {
+                    il.Emit(OpCodes.Ldloc_S, dim[i].LocalIndex);
+                    if (i > 0) il.Emit(OpCodes.Mul);
+                }
+                //call Array.Copy(args[0],dst,rank1*rank2*...*rankN)
+                il.Emit(OpCodes.Call, ca);//return void
+
+                il.Emit(OpCodes.Ldloc_S, dst.LocalIndex);
+                il.Emit(OpCodes.Ret);
+
+                return (Func<T, T>)creator.CreateDelegate(typeof(Func<T, T>));
             }
         }
 
