@@ -172,7 +172,7 @@ namespace EP.Ex
         /// <returns>Method info if present, else null</returns>
         private static MethodInfo m_get_info(Type t)
         {
-            if (t.IsArray)
+            if (t.IsArray && t.GetArrayRank() == 1)
             {
                 var arrt = t.GetElementType();
                 return typeof(CopyBaseHelper).GetMethod(nameof(CopyBaseHelper.m_deepcopy_array), FInternalStatic).MakeGenericMethod(arrt);

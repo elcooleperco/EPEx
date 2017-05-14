@@ -303,8 +303,13 @@ namespace EP.Ex.Tests
         [TestMethod()]
         public void DeepCopyMultiArrayTest()
         {
-            var ma2 = MulDimArr.DeepCopy();
-            Assert.IsFalse(Assert.ReferenceEquals(MulDimArr, ma2));
+            var ma = MulDimArr;
+            ma[0, 0, 1, 1, 1] = ma;
+            var ma2 = ma.DeepCopy();
+            Assert.IsFalse(Assert.ReferenceEquals(ma, ma2));
+            Assert.IsFalse(Assert.ReferenceEquals(ma[0, 0, 1, 1, 1], ma2[0, 0, 1, 1, 1]));
+            Assert.IsTrue(Assert.ReferenceEquals(ma[0, 0, 1, 1, 1], ma));
+            Assert.IsTrue(Assert.ReferenceEquals(ma2[0, 0, 1, 1, 1], ma2));
         }
     }
 }
