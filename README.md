@@ -51,8 +51,47 @@ namespace EP.Ex.Tests
         }
 }
 ```  
+#### Multi Dimentional:
+```csharp
+            var ma =  
+                new object[1, 1, 2, 2, 2] 
+                {
+                    {
+                        {
+                            {
+                                { "test", 1 },
+                                { 2, 2 }
+                            },
+                            {
+                                { 3, 4 },
+                                { "rer", 5 }
+                            }
+                        }
+                    }
+                };
+            ma[0, 0, 1, 1, 1] = ma;
+            var ma2 = ma.DeepCopy();
+            var mav = 
+                new int[1, 1, 2, 2, 2] 
+                {
+                    {
+                        {
+                            {
+                                { 5, 1 },
+                                { 2, 2 }
+                            },
+                            {
+                                { 3, 4 },
+                                { 7, 5 }
+                            }
+                        }
+                    }
+                };
+            var mav2 = mav.DeepCopy();
+```
 
-#### Another nice addition is the ability to complete cast to the parent class:
+
+#### Another nice addition is the ability to complete 'upcast' to the parent class:
 ```csharp
   var child=new ChildClass();
   var obj=Obj<ParentClass>.ShallowCopy(child);
@@ -82,11 +121,11 @@ You can override the method of creating a deep copy of an object, using **_SetDe
             {
                 if (!dict.TryGetValue(p.Key, out key))
                 {
-                    key = dict[p.Key] = p.Key.DeepCopy();
+                    key = dict[p.Key] = p.Key.DeepCopy(dict);
                 }
                 if (!dict.TryGetValue(p.Value, out value))
                 {
-                    value = dict[p.Value] = p.Value.DeepCopy();
+                    value = dict[p.Value] = p.Value.DeepCopy(dict);
                 }
                 dst[key] = value;
             }
