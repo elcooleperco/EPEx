@@ -26,7 +26,7 @@
     <dependencies>
     </dependencies>
     <references></references>
-    <tags>clone deep copy shallow deepcopy deepclone shallowcopy shallowclone</tags>
+    <tags>clone deep copy shallow deepcopy deepclone shallowcopy shallowclone array arrayclone arraycopy object objectcopy objectclone fast fastclone fastcopy fastdeep</tags>
     <frameworkAssemblies>
       <frameworkAssembly assemblyName="System" />
     </frameworkAssemblies>
