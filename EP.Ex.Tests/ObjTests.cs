@@ -292,7 +292,34 @@ namespace EP.Ex.Tests
             var ht2 = ht1.DeepCopy();
             Assert.IsFalse(Assert.ReferenceEquals(ht1, ht2));
         }
-        private object[,,,,] MulDimArr = new object[1, 1, 2, 2, 2] { { { { { "test", 1 }, { 2, 2 } }, { { 3, 4 }, { "rer", 5 } } } } };
+        private object[,,,,] MulDimArr = new object[1, 1, 2, 2, 2] {
+            {
+                {
+                    {
+                        { "test", 1 },
+                        { 2, 2 }
+                    },
+                    {
+                        { 3, 4 },
+                        { "rer", 5 }
+                    }
+                }
+            }
+        };
+        private int[,,,,] MulDimArrValued = new int[1, 1, 2, 2, 2] {
+            {
+                {
+                    {
+                        { 5, 1 },
+                        { 2, 2 }
+                    },
+                    {
+                        { 3, 4 },
+                        { 7, 5 }
+                    }
+                }
+            }
+        };
         [TestMethod()]
         public void ShallowMultiArrayTest()
         {
@@ -306,7 +333,10 @@ namespace EP.Ex.Tests
             var ma = MulDimArr;
             ma[0, 0, 1, 1, 1] = ma;
             var ma2 = ma.DeepCopy();
+            var mav = MulDimArrValued;
+            var mav2 = mav.DeepCopy();
             Assert.IsFalse(Assert.ReferenceEquals(ma, ma2));
+            Assert.IsFalse(Assert.ReferenceEquals(mav, mav2));
             Assert.IsFalse(Assert.ReferenceEquals(ma[0, 0, 1, 1, 1], ma2[0, 0, 1, 1, 1]));
             Assert.IsTrue(Assert.ReferenceEquals(ma[0, 0, 1, 1, 1], ma));
             Assert.IsTrue(Assert.ReferenceEquals(ma2[0, 0, 1, 1, 1], ma2));
