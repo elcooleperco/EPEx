@@ -117,7 +117,15 @@ namespace EP.Ex.Tests
             stopwatch.Stop();
             Console.WriteLine("Activator.CreateInstance(typeof(TestClass)) : {0} ms", stopwatch.ElapsedMilliseconds);
         }
-
+        [TestMethod()]
+        public void NewWONoArgConstructorTest()
+        {
+            var obj = new { test = 1, other = "string" };
+            var dup = obj.DeepCopy();
+            Assert.AreEqual(obj.test, dup.test);
+            Assert.AreEqual(obj.other, dup.other);
+            Assert.IsFalse(Object.ReferenceEquals(obj, dup));
+        }
         [TestMethod()]
         public void NewTest()
         {
