@@ -45,9 +45,9 @@ namespace EP.Ex
         #region Public Methods
 
         /// <summary>
-        /// Create new object
+        /// Create new, object using constructor without arguments
         /// </summary>
-        /// <returns>new object type T</returns>
+        /// <returns>new object type T, if constructor w/o args absent missing than null.</returns>
         public static T New()
         {
             return c_tor();
@@ -533,10 +533,10 @@ namespace EP.Ex
         }
 
         /// <summary>
-        /// Create new object
+        /// Create new object, using constructor without arguments
         /// </summary>
         /// <typeparam name="T">typeof object</typeparam>
-        /// <returns>New object</returns>
+        /// <returns>New object, if constructor w/o args absent missing than null</returns>
         public static T New<T>()
         {
             return Obj<T>.c_tor();
@@ -584,7 +584,7 @@ namespace EP.Ex
 
         #region Internal Methods
 
-        /// <summary> Set instruction to create new object </summary> <param name="il">MSIL
+        /// <summary> Set instruction to create new object, or return null if absent constructor without args </summary> <param name="il">MSIL
         /// instruction generator<param> <param name="t">type of new object</param>
         internal static void m_create_new_generate(ILGenerator il, Type t)
         {
@@ -595,7 +595,15 @@ namespace EP.Ex
             else
             {
                 var c = t.GetConstructor(new Type[] { });
-                il.Emit(OpCodes.Newobj, c);
+                //if constructor without argument absent than return null
+                if (c != null)
+                {
+                    il.Emit(OpCodes.Newobj, c);
+                }
+                else
+                {
+                    il.Emit(OpCodes.Ldnull);
+                }
             }
         }
 
@@ -680,7 +688,7 @@ namespace EP.Ex
         #region Private Methods
 
         /// <summary> Set instruction to init new structure </summary> <param name="il">MSIL
-        /// instruction generator<param> <param name="t">type of new struct</param
+        /// instruction generator<param> <param name="t">type of new struct</param>
         private static void m_initsruct_generate(ILGenerator il, Type t)
         {
             var vt = il.DeclareLocal(t);
