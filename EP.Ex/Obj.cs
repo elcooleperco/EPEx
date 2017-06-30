@@ -371,34 +371,36 @@ namespace EP.Ex
                 il.Emit(OpCodes.Ldloc_S, va);//[stack: obj,new uninited obj]
                 il.Emit(OpCodes.Ldarg_1);//[stack: obj,new uninited obj,dict]
                 il.Emit(OpCodes.Call, m_add_to_dict_method);//[stack:]
-                var flds = Obj.m_get_flds(t);
-                if (flds != null && flds.Length > 0)
+                foreach (var fi in Obj.m_get_flds_each(t))
                 {
-                    for (int i = 0; i < flds.Length; ++i)
+                    var ft = fi.FieldType;
+#if DEBUG
+                    il.EmitWriteLine($"Copy fld: {fi.Name}, of type {fi.FieldType}");
+#endif
+                    bool simple = ft.IsSimple();
+                    if (t.IsValueType)
                     {
-                        var fi = flds[i];
-                        var ft = fi.FieldType;
-                        bool simple = ft.IsSimple();
-                        if (t.IsValueType)
-                        {
-                            il.Emit(OpCodes.Ldloca_S, va);//[stack:addr new uninited obj]
-                        }
-                        else
-                        {
-                            il.Emit(OpCodes.Ldloc_S, va);//[stack:new uninited obj]
-                        }
-                        il.Emit(OpCodes.Ldarg_S, 0);//[stack:new obj
-                        il.Emit(OpCodes.Ldfld, fi);//[stack:new obj,fldvalue]
-
-                        if (!simple)
-                        {
-                            m_deep_clone_obj_il_gen(il, ft);//[stack:new obj,new fldvalue]
-                        }
-                        il.Emit(OpCodes.Stfld, fi);//[stack: new obj]
+                        il.Emit(OpCodes.Ldloca_S, va);//[stack:addr new uninited obj]
                     }
+                    else
+                    {
+                        il.Emit(OpCodes.Ldloc_S, va);//[stack:new uninited obj]
+                    }
+                    il.Emit(OpCodes.Ldarg_S, 0);//[stack:new obj
+                    il.Emit(OpCodes.Ldfld, fi);//[stack:new obj,fldvalue]
+
+                    if (!simple)
+                    {
+                        m_deep_clone_obj_il_gen(il, ft);//[stack:new obj,new fldvalue]
+                    }
+
+                    il.Emit(OpCodes.Stfld, fi);//[stack: new obj]
                 }
                 il.Emit(OpCodes.Ldloc_S, va);//[stack:new obj]
             }
+#if DEBUG
+            il.EmitWriteLine("*********");
+#endif
             il.Emit(OpCodes.Ret);
             return (Func<T, Dictionary<object, object>, T>)creator.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>));
         }
@@ -427,16 +429,12 @@ namespace EP.Ex
                 Obj.m_create_uninit_generate(il, t);
                 LocalBuilder va = il.DeclareLocal(t);
                 il.Emit(OpCodes.Stloc_S, va);
-                var flds = Obj.m_get_flds(t);
-                if (flds != null && flds.Length > 0)
+                foreach (var fi in Obj.m_get_flds_each(t))
                 {
-                    for (int i = 0; i < flds.Length; ++i)
-                    {
-                        il.Emit(OpCodes.Ldloc_S, va);
-                        il.Emit(OpCodes.Ldarg_S, 0);
-                        il.Emit(OpCodes.Ldfld, flds[i]);
-                        il.Emit(OpCodes.Stfld, flds[i]);
-                    }
+                    il.Emit(OpCodes.Ldloc_S, va);
+                    il.Emit(OpCodes.Ldarg_S, 0);
+                    il.Emit(OpCodes.Ldfld, fi);
+                    il.Emit(OpCodes.Stfld, fi);
                 }
                 il.Emit(OpCodes.Ldloc_S, va);
             }
@@ -680,7 +678,7 @@ namespace EP.Ex
         /// <returns></returns>
         internal static FieldInfo[] m_get_flds(Type t)
         {
-            return t.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public); ;
+            return t.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly); ;
         }
 
         #endregion Internal Methods
@@ -695,6 +693,23 @@ namespace EP.Ex
             il.Emit(OpCodes.Ldloca_S, vt);
             il.Emit(OpCodes.Initobj, t);
             il.Emit(OpCodes.Ldloc_S, vt);
+        }
+        /// <summary>
+        /// Get all private,internal,public filds include inherited
+        /// </summary>
+        /// <param name="t">type of object/struct</param>
+        /// <returns>Fields enumerator</returns>
+        internal static IEnumerable<FieldInfo> m_get_flds_each(Type t)
+        {
+            //if (t.IsValueType) return m_get_flds(t);
+
+            while (t != typeof(object))
+            {
+                var flds = m_get_flds(t);
+                for (var i = 0; i < flds.Length; ++i) yield return flds[i];
+                if (t.IsValueType) yield break;
+                t = t.BaseType;
+            }
         }
 
         #endregion Private Methods

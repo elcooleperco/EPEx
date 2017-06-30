@@ -25,13 +25,43 @@ namespace EP.Ex.Tests
 
         #region Public Classes
 
+        public class A
+        {
+            #region Public Properties
+
+            public A other { get; set; }
+
+            #endregion Public Properties
+
+            #region Public Constructors
+
+            public A()
+            {
+            }
+
+            #endregion Public Constructors
+        }
+
+        public class B : A
+        {
+            #region Public Constructors
+
+            public B()
+                : base()
+            {
+            }
+
+            #endregion Public Constructors
+        }
+
         public class DeepTestClass
         {
             #region Public Fields
 
+            public int[] Arr;
             public Dictionary<string, object> Dict = new Dictionary<string, object>();
             public string Str;
-            public int[] Arr;
+
             #endregion Public Fields
 
             #region Public Constructors
@@ -117,15 +147,7 @@ namespace EP.Ex.Tests
             stopwatch.Stop();
             Console.WriteLine("Activator.CreateInstance(typeof(TestClass)) : {0} ms", stopwatch.ElapsedMilliseconds);
         }
-        [TestMethod()]
-        public void NewWONoArgConstructorTest()
-        {
-            var obj = new { test = 1, other = "string" };
-            var dup = obj.DeepCopy();
-            Assert.AreEqual(obj.test, dup.test);
-            Assert.AreEqual(obj.other, dup.other);
-            Assert.IsFalse(Object.ReferenceEquals(obj, dup));
-        }
+
         [TestMethod()]
         public void NewTest()
         {
@@ -173,6 +195,16 @@ namespace EP.Ex.Tests
             }
             stopwatch.Stop();
             Console.WriteLine("Obj.DeepCopy : {0} ms", stopwatch.ElapsedMilliseconds);
+        }
+
+        [TestMethod()]
+        public void NewWONoArgConstructorTest()
+        {
+            var obj = new { test = 1, other = "string" };
+            var dup = obj.DeepCopy();
+            Assert.AreEqual(obj.test, dup.test);
+            Assert.AreEqual(obj.other, dup.other);
+            Assert.IsFalse(Object.ReferenceEquals(obj, dup));
         }
 
         [TestMethod()]
@@ -224,6 +256,42 @@ namespace EP.Ex.Tests
 
         #endregion Private Structs
 
+        #region Private Fields
+
+        private const string str = "231231";
+
+        private object[,,,,] MulDimArr = new object[1, 1, 2, 2, 2] {
+            {
+                {
+                    {
+                        { "test", 1 },
+                        { 2, 2 }
+                    },
+                    {
+                        { 3, 4 },
+                        { "rer", 5 }
+                    }
+                }
+            }
+        };
+
+        private int[,,,,] MulDimArrValued = new int[1, 1, 2, 2, 2] {
+            {
+                {
+                    {
+                        { 5, 1 },
+                        { 2, 2 }
+                    },
+                    {
+                        { 3, 4 },
+                        { 7, 5 }
+                    }
+                }
+            }
+        };
+
+        #endregion Private Fields
+
         public static Dictionary<object, object> CloneDict(Dictionary<object, object> src, Dictionary<object, object> dict)
         {
             var dst = new Dictionary<object, object>();
@@ -245,9 +313,31 @@ namespace EP.Ex.Tests
         }
 
         [TestMethod()]
+        public void DeepCopyHSTest()
+        {
+            var ht1 = new HashSet<object>(new object[] { "test", 1, 2, 3, 4, 5 });
+            var ht2 = ht1.DeepCopy();
+            Assert.IsFalse(Assert.ReferenceEquals(ht1, ht2));
+        }
+
+        [TestMethod()]
+        public void DeepCopyMultiArrayTest()
+        {
+            var ma = MulDimArr;
+            ma[0, 0, 1, 1, 1] = ma;
+            var ma2 = ma.DeepCopy();
+            var mav = MulDimArrValued;
+            var mav2 = mav.DeepCopy();
+            Assert.IsFalse(Assert.ReferenceEquals(ma, ma2));
+            Assert.IsFalse(Assert.ReferenceEquals(mav, mav2));
+            Assert.IsFalse(Assert.ReferenceEquals(ma[0, 0, 1, 1, 1], ma2[0, 0, 1, 1, 1]));
+            Assert.IsTrue(Assert.ReferenceEquals(ma[0, 0, 1, 1, 1], ma));
+            Assert.IsTrue(Assert.ReferenceEquals(ma2[0, 0, 1, 1, 1], ma2));
+        }
+
+        [TestMethod()]
         public void DeepCopyTest()
         {
-            const string str = "231231";
             object[] arr = new object[2] { 1, "str" };
             var obj1 = arr.ShallowCopy();
             var p = Obj<object[]>.ShallowCopy(arr);
@@ -293,61 +383,48 @@ namespace EP.Ex.Tests
             Assert.IsFalse(Assert.ReferenceEquals(t, t1));
             Assert.IsFalse(Assert.ReferenceEquals(s.t, s1.t));
         }
+
         [TestMethod()]
-        public void DeepCopyHSTest()
+        public void InheritenseLinkedPropertyCopyTest()
         {
-            var ht1 = new HashSet<object>(new object[] { "test", 1, 2, 3, 4, 5 });
-            var ht2 = ht1.DeepCopy();
-            Assert.IsFalse(Assert.ReferenceEquals(ht1, ht2));
+            var a = Obj<A>.New();
+            var b = Obj<B>.New();
+
+            a.other = b;
+            b.other = a;
+            var c = a.DeepCopy();
+
+            Assert.IsTrue(Object.ReferenceEquals(c, c.other.other));
         }
-        private object[,,,,] MulDimArr = new object[1, 1, 2, 2, 2] {
-            {
-                {
-                    {
-                        { "test", 1 },
-                        { 2, 2 }
-                    },
-                    {
-                        { 3, 4 },
-                        { "rer", 5 }
-                    }
-                }
-            }
-        };
-        private int[,,,,] MulDimArrValued = new int[1, 1, 2, 2, 2] {
-            {
-                {
-                    {
-                        { 5, 1 },
-                        { 2, 2 }
-                    },
-                    {
-                        { 3, 4 },
-                        { 7, 5 }
-                    }
-                }
-            }
-        };
+
+        [TestMethod()]
+        public void LinkedDeepCopyTest()
+        {
+            DeepTestClass t = Obj<DeepTestClass>.New();
+            t.Linked = new DeepTestClass();
+            t.Linked.Linked = t;
+            t.Str = str + str;
+            var t1 = Obj.DeepCopy(t);
+            Assert.IsTrue(Object.ReferenceEquals(t1, t1.Linked.Linked));
+        }
+
         [TestMethod()]
         public void ShallowMultiArrayTest()
         {
-
             var ma2 = MulDimArr.ShallowCopy();
             Assert.IsFalse(Assert.ReferenceEquals(MulDimArr, ma2));
         }
+
         [TestMethod()]
-        public void DeepCopyMultiArrayTest()
+        public void StructCopyTest()
         {
-            var ma = MulDimArr;
-            ma[0, 0, 1, 1, 1] = ma;
-            var ma2 = ma.DeepCopy();
-            var mav = MulDimArrValued;
-            var mav2 = mav.DeepCopy();
-            Assert.IsFalse(Assert.ReferenceEquals(ma, ma2));
-            Assert.IsFalse(Assert.ReferenceEquals(mav, mav2));
-            Assert.IsFalse(Assert.ReferenceEquals(ma[0, 0, 1, 1, 1], ma2[0, 0, 1, 1, 1]));
-            Assert.IsTrue(Assert.ReferenceEquals(ma[0, 0, 1, 1, 1], ma));
-            Assert.IsTrue(Assert.ReferenceEquals(ma2[0, 0, 1, 1, 1], ma2));
+            K s;
+            s.Field = 1;
+            s.t = new TestClass();
+            var s1 = Obj.DeepCopy(s);
+            Assert.IsInstanceOfType(s1, typeof(K));
+            Assert.AreEqual(s1.Field, s.Field);
+            Assert.IsFalse(Assert.ReferenceEquals(s.t, s1.t));
         }
     }
 }
