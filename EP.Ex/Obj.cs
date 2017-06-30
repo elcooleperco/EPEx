@@ -319,10 +319,10 @@ namespace EP.Ex
             {
                 il.Emit(OpCodes.Box, objtype);//[(object)obj]
             }
-            else
-            {
-                il.Emit(OpCodes.Castclass, typeof(object));//[(object)obj]
-            }
+            //else
+            //{
+            //    il.Emit(OpCodes.Castclass, typeof(object));//[(object)obj]
+            //}
             var dc = typeof(Obj).GetMethod(nameof(Obj.m_deepcopy), FInternalStatic);
             il.Emit(OpCodes.Ldarg_1);//[(object)obj,dict]
             il.Emit(OpCodes.Call, dc);//[(object)new obj]
@@ -330,10 +330,10 @@ namespace EP.Ex
             {
                 il.Emit(OpCodes.Unbox, objtype);//[new obj]
             }
-            else
-            {
-                il.Emit(OpCodes.Castclass, objtype);//[new obj]
-            }
+            //else
+            //{
+            //    il.Emit(OpCodes.Castclass, objtype);//[new obj]
+            //}
         }
 
         /// <summary>
@@ -520,10 +520,10 @@ namespace EP.Ex
                 {
                     il.Emit(OpCodes.Box, t);
                 }
-                else
-                {
-                    il.Emit(OpCodes.Castclass, typeof(object));
-                }
+                //else
+                //{
+                //    il.Emit(OpCodes.Castclass, typeof(object));
+                //}
                 il.Emit(OpCodes.Ret);
                 m_map[t] = (f = (Func<object>)creator.CreateDelegate(typeof(Func<object>)));
             }
