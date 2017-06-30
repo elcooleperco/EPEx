@@ -582,8 +582,9 @@ namespace EP.Ex
 
         #region Internal Methods
 
-        /// <summary> Set instruction to create new object, or return null if absent constructor without args </summary> <param name="il">MSIL
-        /// instruction generator<param> <param name="t">type of new object</param>
+        /// <summary> Set instruction to create new object, or return null if absent constructor without args </summary> 
+        /// <param name="il">MSIL instruction generator<param> 
+        /// <param name="t">type of new object</param>
         internal static void m_create_new_generate(ILGenerator il, Type t)
         {
             if (t.IsValueType)
@@ -605,8 +606,9 @@ namespace EP.Ex
             }
         }
 
-        /// <summary> Set instruction to create new uninitialized object </summary> <param
-        /// name="il">MSIL instruction generator<param> <param name="t">type of new object</param
+        /// <summary> Set instruction to create new uninitialized object </summary> 
+        /// <param name="il">MSIL instruction generator<param> 
+        /// <param name="t">type of new object</param
         internal static void m_create_uninit_generate(ILGenerator il, Type t)
         {
             if (t.IsValueType)
@@ -685,8 +687,9 @@ namespace EP.Ex
 
         #region Private Methods
 
-        /// <summary> Set instruction to init new structure </summary> <param name="il">MSIL
-        /// instruction generator<param> <param name="t">type of new struct</param>
+        /// <summary> Set instruction to init new structure </summary> 
+        /// <param name="il">MSIL instruction generator<param> 
+        /// <param name="t">type of new struct</param>
         private static void m_initsruct_generate(ILGenerator il, Type t)
         {
             var vt = il.DeclareLocal(t);
