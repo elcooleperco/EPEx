@@ -319,10 +319,6 @@ namespace EP.Ex
             {
                 il.Emit(OpCodes.Box, objtype);//[(object)obj]
             }
-            //else
-            //{
-            //    il.Emit(OpCodes.Castclass, typeof(object));//[(object)obj]
-            //}
             var dc = typeof(Obj).GetMethod(nameof(Obj.m_deepcopy), FInternalStatic);
             il.Emit(OpCodes.Ldarg_1);//[(object)obj,dict]
             il.Emit(OpCodes.Call, dc);//[(object)new obj]
@@ -332,10 +328,6 @@ namespace EP.Ex
                 //equivalent Opcodes.Unbox, 
                 //then Opcodes.Ldobj
             }
-            //else
-            //{
-            //    il.Emit(OpCodes.Castclass, objtype);//[new obj]
-            //}
         }
 
         /// <summary>
@@ -356,6 +348,7 @@ namespace EP.Ex
                 return m_arr_deep_copy_mi();
             }
             var dic_t = typeof(Dictionary<object, object>);
+
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t, dic_t }, t, true);
             ILGenerator il = creator.GetILGenerator();
 
@@ -398,7 +391,6 @@ namespace EP.Ex
                     {
                         m_deep_clone_obj_il_gen(il, ft);//[stack:new obj,new fldvalue]
                     }
-
                     il.Emit(OpCodes.Stfld, fi);//[stack: new obj]
                 }
                 il.Emit(OpCodes.Ldloc_S, va);//[stack:new obj]
@@ -525,10 +517,7 @@ namespace EP.Ex
                 {
                     il.Emit(OpCodes.Box, t);
                 }
-                //else
-                //{
-                //    il.Emit(OpCodes.Castclass, typeof(object));
-                //}
+
                 il.Emit(OpCodes.Ret);
                 m_map[t] = (f = (Func<object>)creator.CreateDelegate(typeof(Func<object>)));
             }
