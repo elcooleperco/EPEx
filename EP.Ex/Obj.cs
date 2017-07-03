@@ -369,10 +369,13 @@ namespace EP.Ex
                 Obj.m_create_uninit_generate(il, t);//[stack:new uninited obj]
                 LocalBuilder va = il.DeclareLocal(t);
                 il.Emit(OpCodes.Stloc_S, va);//[stack:]
-                il.Emit(OpCodes.Ldarg_0);//[stack: obj]
-                il.Emit(OpCodes.Ldloc_S, va);//[stack: obj,new uninited obj]
-                il.Emit(OpCodes.Ldarg_1);//[stack: obj,new uninited obj,dict]
-                il.Emit(OpCodes.Call, m_add_to_dict_method);//[stack:]
+                if (!t.IsValueType)
+                {
+                    il.Emit(OpCodes.Ldarg_0);//[stack: obj]
+                    il.Emit(OpCodes.Ldloc_S, va);//[stack: obj,new uninited obj]
+                    il.Emit(OpCodes.Ldarg_1);//[stack: obj,new uninited obj,dict]
+                    il.Emit(OpCodes.Call, m_add_to_dict_method);//[stack:]
+                }
                 foreach (var fi in Obj.m_get_flds_each(t))
                 {
                     var ft = fi.FieldType;
