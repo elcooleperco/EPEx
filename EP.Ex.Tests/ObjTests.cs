@@ -10,94 +10,6 @@ namespace EP.Ex.Tests
     [TestClass()]
     public class ObjTests
     {
-        #region Public Structs
-
-        public struct st1
-        {
-            #region Public Fields
-
-            public string s;
-
-            #endregion Public Fields
-        }
-
-        #endregion Public Structs
-
-        #region Public Classes
-
-        public class A
-        {
-            #region Public Properties
-
-            public A other { get; set; }
-
-            #endregion Public Properties
-
-            #region Public Constructors
-
-            public A()
-            {
-            }
-
-            #endregion Public Constructors
-        }
-
-        public class B : A
-        {
-            #region Public Constructors
-
-            public B()
-                : base()
-            {
-            }
-
-            #endregion Public Constructors
-        }
-
-        public class DeepTestClass
-        {
-            #region Public Fields
-
-            public int[] Arr;
-            public Dictionary<string, object> Dict = new Dictionary<string, object>();
-            public string Str;
-
-            #endregion Public Fields
-
-            #region Public Constructors
-
-            public DeepTestClass Linked;
-
-            public DeepTestClass()
-            {
-                Str = "Test Str";
-                Dict["Me"] = this;
-                Arr = new int[4] { 1, 234, 432, 1 };
-            }
-
-            #endregion Public Constructors
-        }
-
-        public class TestClass
-        {
-            #region Public Fields
-
-            public string Str;
-
-            #endregion Public Fields
-
-            #region Public Constructors
-
-            public TestClass()
-            {
-                Str = "Test Str";
-            }
-
-            #endregion Public Constructors
-        }
-
-        #endregion Public Classes
-
         #region Public Methods
 
         [TestMethod()]
@@ -319,7 +231,22 @@ namespace EP.Ex.Tests
             var ht2 = ht1.DeepCopy();
             Assert.IsFalse(Assert.ReferenceEquals(ht1, ht2));
         }
-
+        [TestMethod()]
+        public void DateTimeTest()
+        {
+            var dt = DateTime.Now;
+            var dt1 = dt.DeepCopy();
+            Assert.AreEqual(dt, dt1);
+        }
+        [TestMethod]
+        public void GenericTest()
+        {
+            var sn = new TestNode();
+            sn.fld = Obj.DeepCopy(DateTime.Now);
+            var sn1 = sn.DeepCopy();
+            Assert.AreEqual(sn.fld, sn1.fld);
+            Assert.IsFalse(Object.ReferenceEquals(sn, sn1));
+        }
         [TestMethod()]
         public void DeepCopyMultiArrayTest()
         {
@@ -414,7 +341,14 @@ namespace EP.Ex.Tests
             var ma2 = MulDimArr.ShallowCopy();
             Assert.IsFalse(Assert.ReferenceEquals(MulDimArr, ma2));
         }
-
+        [TestMethod()]
+        public void ArrayStructCopyTest()
+        {
+            DateTime[] s = new DateTime[] { DateTime.Now, DateTime.UtcNow };
+            var s1 = Obj.DeepCopy(s);
+            Assert.IsInstanceOfType(s1, typeof(DateTime[]));
+            Assert.AreEqual(s1[0], s[0]);
+        }
         [TestMethod()]
         public void StructCopyTest()
         {

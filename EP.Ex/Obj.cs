@@ -319,21 +319,15 @@ namespace EP.Ex
             {
                 il.Emit(OpCodes.Box, objtype);//[(object)obj]
             }
-            //else
-            //{
-            //    il.Emit(OpCodes.Castclass, typeof(object));//[(object)obj]
-            //}
             var dc = typeof(Obj).GetMethod(nameof(Obj.m_deepcopy), FInternalStatic);
             il.Emit(OpCodes.Ldarg_1);//[(object)obj,dict]
             il.Emit(OpCodes.Call, dc);//[(object)new obj]
             if (box)
             {
-                il.Emit(OpCodes.Unbox, objtype);//[new obj]
+                il.Emit(OpCodes.Unbox_Any, objtype);//[new obj]
+                //equivalent Opcodes.Unbox, 
+                //then Opcodes.Ldobj
             }
-            //else
-            //{
-            //    il.Emit(OpCodes.Castclass, objtype);//[new obj]
-            //}
         }
 
         /// <summary>
@@ -354,6 +348,7 @@ namespace EP.Ex
                 return m_arr_deep_copy_mi();
             }
             var dic_t = typeof(Dictionary<object, object>);
+
             DynamicMethod creator = new DynamicMethod(string.Empty, t, new Type[] { t, dic_t }, t, true);
             ILGenerator il = creator.GetILGenerator();
 
@@ -367,10 +362,13 @@ namespace EP.Ex
                 Obj.m_create_uninit_generate(il, t);//[stack:new uninited obj]
                 LocalBuilder va = il.DeclareLocal(t);
                 il.Emit(OpCodes.Stloc_S, va);//[stack:]
-                il.Emit(OpCodes.Ldarg_0);//[stack: obj]
-                il.Emit(OpCodes.Ldloc_S, va);//[stack: obj,new uninited obj]
-                il.Emit(OpCodes.Ldarg_1);//[stack: obj,new uninited obj,dict]
-                il.Emit(OpCodes.Call, m_add_to_dict_method);//[stack:]
+                if (!t.IsValueType)
+                {
+                    il.Emit(OpCodes.Ldarg_0);//[stack: obj]
+                    il.Emit(OpCodes.Ldloc_S, va);//[stack: obj,new uninited obj]
+                    il.Emit(OpCodes.Ldarg_1);//[stack: obj,new uninited obj,dict]
+                    il.Emit(OpCodes.Call, m_add_to_dict_method);//[stack:]
+                }
                 foreach (var fi in Obj.m_get_flds_each(t))
                 {
                     var ft = fi.FieldType;
@@ -393,7 +391,6 @@ namespace EP.Ex
                     {
                         m_deep_clone_obj_il_gen(il, ft);//[stack:new obj,new fldvalue]
                     }
-
                     il.Emit(OpCodes.Stfld, fi);//[stack: new obj]
                 }
                 il.Emit(OpCodes.Ldloc_S, va);//[stack:new obj]
@@ -520,10 +517,7 @@ namespace EP.Ex
                 {
                     il.Emit(OpCodes.Box, t);
                 }
-                //else
-                //{
-                //    il.Emit(OpCodes.Castclass, typeof(object));
-                //}
+
                 il.Emit(OpCodes.Ret);
                 m_map[t] = (f = (Func<object>)creator.CreateDelegate(typeof(Func<object>)));
             }
