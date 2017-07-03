@@ -328,7 +328,9 @@ namespace EP.Ex
             il.Emit(OpCodes.Call, dc);//[(object)new obj]
             if (box)
             {
-                il.Emit(OpCodes.Unbox, objtype);//[new obj]
+                il.Emit(OpCodes.Unbox_Any, objtype);//[new obj]
+                //equivalent Opcodes.Unbox, 
+                //then Opcodes.Ldobj
             }
             //else
             //{
