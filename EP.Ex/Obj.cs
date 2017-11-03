@@ -125,11 +125,11 @@ namespace EP.Ex
 
                 //remove prev [array,rank] append integer(value length on current rank(dim))
                 il.Emit(OpCodes.Dup);
-                il.Emit(OpCodes.Stloc_S, dim[i]);
+                il.StoreLocal(dim[i]);
             }
 
             il.Emit(OpCodes.Newobj, ctor);//create Array same rank
-            il.Emit(OpCodes.Stloc_S, dst);
+            il.StoreLocal(dst);
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace EP.Ex
 
             //store new array at the walked dictionary
             il.Emit(OpCodes.Ldarg_0);//[stack: src]
-            il.Emit(OpCodes.Ldloc_S, dst);//[stack: src,new dst]
+            il.LoadLocal(dst);//[stack: src,new dst]
             il.Emit(OpCodes.Ldarg_1);//[stack: src,new dst,dict]
             il.Emit(OpCodes.Call, m_add_to_dict_method);//[stack:]
             var gv = t.GetMethod("Get", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -173,7 +173,7 @@ namespace EP.Ex
                 start_loop[i] = il.DefineLabel();
                 next_loop[i] = il.DefineLabel();
                 il.Emit(OpCodes.Ldc_I4_0);
-                il.Emit(OpCodes.Stloc_S, loop_var[i]);
+                il.StoreLocal(loop_var[i]);
                 il.Emit(OpCodes.Br, start_loop[i]);
                 il.MarkLabel(next_loop[i]);
             }
@@ -183,44 +183,44 @@ namespace EP.Ex
             il.Emit(OpCodes.Ldarg_0);//stack [src array]
             for (int i = 0; i < rank; ++i)
             {
-                il.Emit(OpCodes.Ldloc_S, loop_var[i]);//stack ...,[src array],loop_var[1],...,loop_var[i]
+                il.LoadLocal(loop_var[i]);//stack ...,[src array],loop_var[1],...,loop_var[i]
             }
             il.Emit(OpCodes.Call, gv);//stack ...,[element from array]
-            il.Emit(OpCodes.Stloc_S, cur);
+            il.StoreLocal(cur);
 
             if (!simple)
             {
-                il.Emit(OpCodes.Ldloc_S, cur);
+                il.LoadLocal(cur);
                 m_deep_clone_obj_il_gen(il, arrt);
-                il.Emit(OpCodes.Stloc_S, cur);
+                il.StoreLocal(cur);
             }
 
             //set item to dst array
-            il.Emit(OpCodes.Ldloc_S, dst);//stack [dst array]
+            il.LoadLocal(dst);//stack [dst array]
             for (int i = 0; i < rank; ++i)
             {
-                il.Emit(OpCodes.Ldloc_S, loop_var[i]);//stack ...,[dst array],loop_var[1],...,loop_var[i]
+                il.LoadLocal(loop_var[i]);//stack ...,[dst array],loop_var[1],...,loop_var[i]
             }
-            il.Emit(OpCodes.Ldloc_S, cur);//stack ...,[dst array],loop_var[1],...,loop_var[rank],[element copy]
+            il.LoadLocal(cur);//stack ...,[dst array],loop_var[1],...,loop_var[rank],[element copy]
             il.Emit(OpCodes.Call, sv);
 
             //end loop
             for (int i = rank - 1; i >= 0; --i)
             {
                 //++i
-                il.Emit(OpCodes.Ldloc_S, loop_var[i]);
+                il.LoadLocal(loop_var[i]);
                 il.Emit(OpCodes.Ldc_I4_1);
                 il.Emit(OpCodes.Add);
-                il.Emit(OpCodes.Stloc_S, loop_var[i]);
+                il.StoreLocal(loop_var[i]);
 
                 //check i<dim[i]
                 il.MarkLabel(start_loop[i]);
-                il.Emit(OpCodes.Ldloc_S, loop_var[i]);
-                il.Emit(OpCodes.Ldloc_S, dim[i]);
+                il.LoadLocal(loop_var[i]);
+                il.LoadLocal(dim[i]);
                 il.Emit(OpCodes.Clt);
                 il.Emit(OpCodes.Brtrue, next_loop[i]);
             }
-            il.Emit(OpCodes.Ldloc_S, dst.LocalIndex);
+            il.LoadLocal(dst.LocalIndex);
             il.Emit(OpCodes.Ret);
 
             return (Func<T, Dictionary<object, object>, T>)creator.CreateDelegate(typeof(Func<T, Dictionary<object, object>, T>));
@@ -247,19 +247,19 @@ namespace EP.Ex
             var ca = typeof(Array).GetMethod("Copy", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(Array), typeof(Array), typeof(int) }, null);
 
             il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldloc_S, dst);
+            il.LoadLocal(dst);
 
             //mul all ranks
             for (int i = 0; i < rank; ++i)
             {
-                il.Emit(OpCodes.Ldloc_S, dim[i]);
+                il.LoadLocal(dim[i]);
                 if (i > 0) il.Emit(OpCodes.Mul);
             }
 
             //call Array.Copy(args[0],dst,rank1*rank2*...*rankN)
             il.Emit(OpCodes.Call, ca);//return void
 
-            il.Emit(OpCodes.Ldloc_S, dst);
+            il.LoadLocal(dst);
             il.Emit(OpCodes.Ret);
 
             return (Func<T, T>)creator.CreateDelegate(typeof(Func<T, T>));
@@ -325,7 +325,8 @@ namespace EP.Ex
             if (box)
             {
                 il.Emit(OpCodes.Unbox_Any, objtype);//[new obj]
-                //equivalent Opcodes.Unbox, 
+
+                //equivalent Opcodes.Unbox,
                 //then Opcodes.Ldobj
             }
         }
@@ -361,11 +362,11 @@ namespace EP.Ex
             {
                 Obj.m_create_uninit_generate(il, t);//[stack:new uninited obj]
                 LocalBuilder va = il.DeclareLocal(t);
-                il.Emit(OpCodes.Stloc_S, va);//[stack:]
+                il.StoreLocal(va);//[stack:]
                 if (!t.IsValueType)
                 {
                     il.Emit(OpCodes.Ldarg_0);//[stack: obj]
-                    il.Emit(OpCodes.Ldloc_S, va);//[stack: obj,new uninited obj]
+                    il.LoadLocal(va);//[stack: obj,new uninited obj]
                     il.Emit(OpCodes.Ldarg_1);//[stack: obj,new uninited obj,dict]
                     il.Emit(OpCodes.Call, m_add_to_dict_method);//[stack:]
                 }
@@ -378,11 +379,11 @@ namespace EP.Ex
                     bool simple = ft.IsSimple();
                     if (t.IsValueType)
                     {
-                        il.Emit(OpCodes.Ldloca_S, va);//[stack:addr new uninited obj]
+                        il.LoadLocalAddress(va);//[stack:addr new uninited obj]
                     }
                     else
                     {
-                        il.Emit(OpCodes.Ldloc_S, va);//[stack:new uninited obj]
+                        il.LoadLocal(va);//[stack:new uninited obj]
                     }
                     il.Emit(OpCodes.Ldarg_S, 0);//[stack:new obj
                     il.Emit(OpCodes.Ldfld, fi);//[stack:new obj,fldvalue]
@@ -393,7 +394,7 @@ namespace EP.Ex
                     }
                     il.Emit(OpCodes.Stfld, fi);//[stack: new obj]
                 }
-                il.Emit(OpCodes.Ldloc_S, va);//[stack:new obj]
+                il.LoadLocal(va);//[stack:new obj]
             }
 #if DEBUG
             il.EmitWriteLine("*********");
@@ -425,15 +426,15 @@ namespace EP.Ex
             {
                 Obj.m_create_uninit_generate(il, t);
                 LocalBuilder va = il.DeclareLocal(t);
-                il.Emit(OpCodes.Stloc_S, va);
+                il.StoreLocal(va);
                 foreach (var fi in Obj.m_get_flds_each(t))
                 {
-                    il.Emit(OpCodes.Ldloc_S, va);
+                    il.LoadLocal(va);
                     il.Emit(OpCodes.Ldarg_S, 0);
                     il.Emit(OpCodes.Ldfld, fi);
                     il.Emit(OpCodes.Stfld, fi);
                 }
-                il.Emit(OpCodes.Ldloc_S, va);
+                il.LoadLocal(va);
             }
             il.Emit(OpCodes.Ret);
             return (Func<T, T>)creator.CreateDelegate(typeof(Func<T, T>));
@@ -576,9 +577,9 @@ namespace EP.Ex
 
         #region Internal Methods
 
-        /// <summary> Set instruction to create new object, or return null if absent constructor without args </summary> 
-        /// <param name="il">MSIL instruction generator<param> 
-        /// <param name="t">type of new object</param>
+        /// <summary> Set instruction to create new object, or return null if absent constructor
+        /// without args </summary> <param name="il">MSIL instruction generator<param> <param
+        /// name="t">type of new object</param>
         internal static void m_create_new_generate(ILGenerator il, Type t)
         {
             if (t.IsValueType)
@@ -588,6 +589,7 @@ namespace EP.Ex
             else
             {
                 var c = t.GetConstructor(new Type[] { });
+
                 //if constructor without argument absent than return null
                 if (c != null)
                 {
@@ -600,9 +602,8 @@ namespace EP.Ex
             }
         }
 
-        /// <summary> Set instruction to create new uninitialized object </summary> 
-        /// <param name="il">MSIL instruction generator<param> 
-        /// <param name="t">type of new object</param
+        /// <summary> Set instruction to create new uninitialized object </summary> <param
+        /// name="il">MSIL instruction generator<param> <param name="t">type of new object</param
         internal static void m_create_uninit_generate(ILGenerator il, Type t)
         {
             if (t.IsValueType)
@@ -681,16 +682,16 @@ namespace EP.Ex
 
         #region Private Methods
 
-        /// <summary> Set instruction to init new structure </summary> 
-        /// <param name="il">MSIL instruction generator<param> 
-        /// <param name="t">type of new struct</param>
+        /// <summary> Set instruction to init new structure </summary> <param name="il">MSIL
+        /// instruction generator<param> <param name="t">type of new struct</param>
         private static void m_initsruct_generate(ILGenerator il, Type t)
         {
             var vt = il.DeclareLocal(t);
-            il.Emit(OpCodes.Ldloca_S, vt);
+            il.LoadLocalAddress(vt);
             il.Emit(OpCodes.Initobj, t);
-            il.Emit(OpCodes.Ldloc_S, vt);
+            il.LoadLocal(vt);
         }
+
         /// <summary>
         /// Get all private,internal,public filds include inherited
         /// </summary>
