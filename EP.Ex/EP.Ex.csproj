@@ -37,6 +37,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CopyBaseHelper.cs" />
+    <Compile Include="ILEx.cs" />
     <Compile Include="Obj.cs" />
     <Compile Include="ObjectEx.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
